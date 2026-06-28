@@ -29,6 +29,9 @@ dependencies:
   # Monetization (RevenueCat) — wire keys before release
   purchases_flutter: ^8.0.0
 
+  # Save/export the edited image (web triggers a download; native writes a file)
+  file_saver: ^0.4.0
+
   # Utilities
   collection: ^1.18.0
   uuid: ^4.4.0

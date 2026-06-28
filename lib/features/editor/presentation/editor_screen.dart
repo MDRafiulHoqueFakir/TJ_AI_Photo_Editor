@@ -1,3 +1,5 @@
+import 'package:file_saver/file_saver.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,7 +40,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     );
     if (bytes == null || !mounted) return;
 
-    // Phase 1: confirm + offer upsell. Phase 2 saves to gallery (gal/saver pkg).
+    // Actually deliver the file: web triggers a browser download, native writes
+    // the file to storage. This closes the import -> edit -> export loop.
+    String? savedAs;
+    String? error;
+    try {
+      savedAs = await FileSaver.instance.saveFile(
+        name: 'tj_edit_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: bytes,
+        fileExtension: 'jpg',
+        mimeType: MimeType.jpeg,
+      );
+    } catch (e) {
+      error = e.toString();
+    }
+    if (!mounted) return;
+
+    final ok = error == null;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surface,
@@ -47,21 +65,45 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle, color: AppColors.accent, size: 48),
+            Icon(
+              ok ? Icons.check_circle : Icons.error_outline,
+              color: ok ? AppColors.accent : AppColors.danger,
+              size: 48,
+            ),
             const SizedBox(height: 12),
             Text(
-              ent.isPro ? 'Exported in full quality' : 'Exported (watermarked)',
+              !ok
+                  ? 'Export failed'
+                  : (ent.isPro ? 'Saved in full quality' : 'Saved (watermarked)'),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            if (!ent.isPro)
+            if (ok && kIsWeb)
+              const Text(
+                'Your image has been downloaded.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            if (ok && !kIsWeb && savedAs != null)
+              Text(
+                'Saved to: $savedAs',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            if (!ok)
+              Text(
+                error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            if (ok && !ent.isPro) ...[
+              const SizedBox(height: 8),
               const Text(
                 'Go Pro to remove the watermark and export in 4K.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary),
               ),
-            const SizedBox(height: 16),
-            if (!ent.isPro)
+              const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
                   Navigator.pop(context);
@@ -69,6 +111,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                 },
                 child: const Text('Remove watermark — Go Pro'),
               ),
+            ],
           ],
         ),
       ),
