@@ -124,11 +124,15 @@ Poll/stream result ──► success ──► debit credit ──► composite 
 - Paywall + RevenueCat integration.
 - **Exit criteria:** acceptance tests in REQUIREMENTS §7 pass.
 
-### Phase 2 — On-device AI (the differentiator)
-- MediaPipe face/pose/segmentation integration via platform channels.
-- Body reshape (mesh warp), teeth whitening, blemish removal.
-- Background removal, passport maker + standards DB.
-- LaMa object removal + one-tap watermark/text select.
+### Phase 2 — On-device AI (the differentiator)  *(in progress)*
+- [x] Editor ops wired in Dart engine: crop/orient, skin smooth, body reshape, background replace.
+- [x] Editor panels live: Retouch, Body, Crop (replacing placeholders).
+- [x] Native ML bridge contract + `ChannelMlService` (MethodChannel `tj_photo_editor/ml`). See [NATIVE_ML_BRIDGE.md](NATIVE_ML_BRIDGE.md).
+- [ ] Native MediaPipe face/pose/segmentation handlers (Android/iOS).
+- [ ] Mesh/liquify GPU warp replacing the interim scale-based reshape.
+- [ ] Teeth whitening, blemish removal (landmark-anchored).
+- [ ] Passport auto-crop using detected face box + segmentation BG removal.
+- [ ] LaMa object removal + one-tap watermark/text select.
 
 ### Phase 3 — Cloud generative (credit-funded)
 - API gateway + credits ledger + signed uploads.

@@ -77,6 +77,18 @@ class EditorController extends Notifier<EditorState> {
     await _render();
   }
 
+  /// Live body-reshape drag: keeps a single top BodyReshapeNode.
+  Future<void> updateLiveBody(BodyReshapeNode node) async {
+    final stack = [...state.stack];
+    if (stack.isNotEmpty && stack.last is BodyReshapeNode) {
+      stack[stack.length - 1] = node;
+    } else {
+      stack.add(node);
+    }
+    state = state.copyWith(stack: stack, isProcessing: true);
+    await _render();
+  }
+
   void undo() {
     if (!state.canUndo) return;
     final stack = [...state.stack];
@@ -116,7 +128,13 @@ class EditorController extends Notifier<EditorState> {
           ),
         ResizeNode(:final width, :final height) =>
           await _engine.resize(buffer, width: width, height: height),
-        CropNode() => buffer, // crop geometry handled in Phase 2 native engine
+        OrientNode(:final degrees, :final flipH) =>
+          await _engine.orient(buffer, degrees: degrees, flipH: flipH),
+        SmoothNode(:final amount) =>
+          await _engine.smoothSkin(buffer, amount: amount),
+        BodyReshapeNode(:final slim, :final stretch) =>
+          await _engine.reshapeBody(buffer, slim: slim, stretch: stretch),
+        CropNode() => buffer, // freeform crop rect handled by native engine
       };
     }
     state = state.copyWith(preview: buffer, isProcessing: false);

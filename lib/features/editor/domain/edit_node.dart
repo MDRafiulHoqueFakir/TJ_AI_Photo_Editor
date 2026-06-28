@@ -48,3 +48,34 @@ class CropNode extends EditNode {
   @override
   Map<String, dynamic> toJson() => {'type': 'crop', 'aspect': aspectLabel};
 }
+
+class OrientNode extends EditNode {
+  const OrientNode({this.degrees = 0, this.flipH = false});
+  final double degrees;
+  final bool flipH;
+
+  @override
+  Map<String, dynamic> toJson() =>
+      {'type': 'orient', 'degrees': degrees, 'flipH': flipH};
+}
+
+class SmoothNode extends EditNode {
+  const SmoothNode({this.amount = 0.3});
+  final double amount; // 0..1
+
+  @override
+  Map<String, dynamic> toJson() => {'type': 'smooth', 'amount': amount};
+}
+
+class BodyReshapeNode extends EditNode {
+  const BodyReshapeNode({this.slim = 0, this.stretch = 0});
+  final double slim; // -1..1
+  final double stretch; // -1..1
+
+  BodyReshapeNode copyWith({double? slim, double? stretch}) =>
+      BodyReshapeNode(slim: slim ?? this.slim, stretch: stretch ?? this.stretch);
+
+  @override
+  Map<String, dynamic> toJson() =>
+      {'type': 'body', 'slim': slim, 'stretch': stretch};
+}

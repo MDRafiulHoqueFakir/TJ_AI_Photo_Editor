@@ -42,5 +42,20 @@ void main() {
       expect(json['type'], 'adjust');
       expect(json['brightness'], 0.2);
     });
+
+    test('Phase 2 nodes serialize for recipes/batch', () {
+      expect(const OrientNode(degrees: -90).toJson()['type'], 'orient');
+      expect(const SmoothNode(amount: 0.4).toJson()['amount'], 0.4);
+      expect(const BodyReshapeNode(slim: -0.3).toJson()['slim'], -0.3);
+    });
+
+    test('updateLiveBody keeps a single top BodyReshapeNode', () async {
+      final notifier = container.read(editorControllerProvider.notifier);
+      await notifier.updateLiveBody(const BodyReshapeNode(slim: 0.1));
+      await notifier.updateLiveBody(const BodyReshapeNode(slim: 0.5));
+      final state = container.read(editorControllerProvider);
+      expect(state.stack.length, 1);
+      expect((state.stack.single as BodyReshapeNode).slim, 0.5);
+    });
   });
 }

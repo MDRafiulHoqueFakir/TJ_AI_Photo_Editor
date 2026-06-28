@@ -7,8 +7,10 @@ import '../../../core/services/image_engine.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../subscription/application/entitlement_provider.dart';
 import '../application/editor_controller.dart';
-import '../domain/edit_node.dart';
 import 'widgets/adjust_panel.dart';
+import 'widgets/body_panel.dart';
+import 'widgets/crop_panel.dart';
+import 'widgets/retouch_panel.dart';
 import 'widgets/tool_rail.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
@@ -72,6 +74,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     );
   }
 
+  Widget _panelFor(EditorTool tool) {
+    return switch (tool) {
+      EditorTool.adjust => const AdjustPanel(),
+      EditorTool.retouch => const RetouchPanel(),
+      EditorTool.body => const BodyPanel(),
+      EditorTool.crop => const CropPanel(),
+      _ => _ComingSoonPanel(tool: tool),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(editorControllerProvider);
@@ -113,9 +125,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               ),
             ),
           ),
-          if (_activeTool == EditorTool.adjust) const AdjustPanel(),
-          if (_activeTool != EditorTool.adjust)
-            _ComingSoonPanel(tool: _activeTool),
+          _panelFor(_activeTool),
           ToolRail(
             active: _activeTool,
             onSelect: (t) => setState(() => _activeTool = t),

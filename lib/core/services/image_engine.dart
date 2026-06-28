@@ -18,6 +18,35 @@ abstract interface class ImageEngine {
   /// Resize to target dimensions (Lanczos in the native impl).
   Future<Uint8List> resize(Uint8List source, {required int width, required int height});
 
+  /// Crop to a pixel rectangle.
+  Future<Uint8List> crop(
+    Uint8List source, {
+    required int x,
+    required int y,
+    required int width,
+    required int height,
+  });
+
+  /// Rotate by [degrees] (clockwise) and/or mirror horizontally.
+  Future<Uint8List> orient(Uint8List source, {double degrees = 0, bool flipH = false});
+
+  /// Skin/portrait smoothing. [amount] 0..1 blends toward a blurred copy.
+  /// Phase 2 native impl uses frequency separation on an ML skin mask; this
+  /// Dart path is a global blend approximation good enough for QA/preview.
+  Future<Uint8List> smoothSkin(Uint8List source, {double amount = 0.3});
+
+  /// Body reshape: [slim] and [stretch] in -1..1 (0 = no change).
+  /// Interim non-uniform scale; replaced by mesh/liquify warp in the GPU engine.
+  Future<Uint8List> reshapeBody(Uint8List source, {double slim = 0, double stretch = 0});
+
+  /// Replace pixels outside [subjectMask] with [bgArgb] (passport/BG tools).
+  /// If [subjectMask] is null (no ML available), fills the whole canvas tint.
+  Future<Uint8List> replaceBackground(
+    Uint8List source, {
+    Uint8List? subjectMask,
+    required int bgArgb,
+  });
+
   /// Encode the working buffer for export.
   Future<Uint8List> export(
     Uint8List source, {
