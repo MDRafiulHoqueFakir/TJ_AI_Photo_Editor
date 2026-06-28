@@ -1,0 +1,50 @@
+/// A single non-destructive edit operation in the stack.
+///
+/// The whole stack is serializable -> this is what makes Recipes and batch
+/// editing possible: save the list, replay it on another photo.
+sealed class EditNode {
+  const EditNode();
+  Map<String, dynamic> toJson();
+}
+
+class AdjustNode extends EditNode {
+  const AdjustNode({this.brightness = 0, this.contrast = 0, this.saturation = 0});
+
+  final double brightness; // -1..1
+  final double contrast; // -1..1
+  final double saturation; // -1..1
+
+  AdjustNode copyWith({double? brightness, double? contrast, double? saturation}) {
+    return AdjustNode(
+      brightness: brightness ?? this.brightness,
+      contrast: contrast ?? this.contrast,
+      saturation: saturation ?? this.saturation,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'adjust',
+        'brightness': brightness,
+        'contrast': contrast,
+        'saturation': saturation,
+      };
+}
+
+class ResizeNode extends EditNode {
+  const ResizeNode({required this.width, required this.height});
+  final int width;
+  final int height;
+
+  @override
+  Map<String, dynamic> toJson() =>
+      {'type': 'resize', 'width': width, 'height': height};
+}
+
+class CropNode extends EditNode {
+  const CropNode({required this.aspectLabel});
+  final String aspectLabel; // e.g. "1:1", "4:5"
+
+  @override
+  Map<String, dynamic> toJson() => {'type': 'crop', 'aspect': aspectLabel};
+}

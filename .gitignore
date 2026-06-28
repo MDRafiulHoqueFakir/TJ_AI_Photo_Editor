@@ -1,0 +1,27 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Generated platform (regenerate with `flutter create .`)
+# Keep these out until first generation; remove lines below once committed.
+# /android/
+# /ios/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+**/secrets.dart
+.env
