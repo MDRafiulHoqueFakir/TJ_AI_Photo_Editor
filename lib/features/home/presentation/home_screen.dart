@@ -98,10 +98,10 @@ class _HeroCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         padding: const EdgeInsets.all(24),
-        child: Column(
+        child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.add_photo_alternate, size: 40, color: Colors.white),
             SizedBox(height: 12),
             Text(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_router.dart';
+import '../../../core/services/gpu/gpu_preview.dart';
 import '../../../core/services/image_engine.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../subscription/application/entitlement_provider.dart';
@@ -149,14 +150,15 @@ class _CanvasView extends StatelessWidget {
         style: TextStyle(color: AppColors.textSecondary),
       );
     }
-    final bytes = comparing ? state.original! : (state.preview ?? state.original!);
+    // Hold-to-compare shows the untouched original; otherwise the GPU layer
+    // paints the current structural result + live tonal adjustments.
+    final Widget canvas = comparing
+        ? Image.memory(state.original!, gaplessPlayback: true)
+        : GpuPreview(image: state.sourceImage!, params: state.adjust);
     return Stack(
       alignment: Alignment.center,
       children: [
-        InteractiveViewer(
-          maxScale: 5,
-          child: Image.memory(bytes, gaplessPlayback: true),
-        ),
+        InteractiveViewer(maxScale: 5, child: canvas),
         if (state.isProcessing)
           const Positioned(
             top: 12,

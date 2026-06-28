@@ -39,9 +39,9 @@ class CropPanel extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _btn(Icons.rotate_left, 'Rotate',
-                  () => controller.pushNode(const OrientNode(degrees: -90))),
+                  () => controller.pushNode(const OrientNode(degrees: -90)),),
               _btn(Icons.flip, 'Flip',
-                  () => controller.pushNode(const OrientNode(flipH: true))),
+                  () => controller.pushNode(const OrientNode(flipH: true)),),
             ],
           ),
         ],

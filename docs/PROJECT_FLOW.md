@@ -138,6 +138,20 @@ Poll/stream result ──► success ──► debit credit ──► composite 
 - API gateway + credits ledger + signed uploads.
 - Hair restyle, generative fill/reposition, AI art prompt, 4× upscale.
 
+### Performance architecture (GPU-first)  *(landed)*
+The hot path is GPU, not CPU. Structural edits (crop/orient/retouch/body) run
+through the CPU edit stack only when changed and are decoded once into a GPU
+texture; the frequently-dragged **tonal layer** (brightness/contrast/exposure/
+saturation/warmth/vignette) runs entirely in a **fragment shader**
+(`shaders/adjustments.frag`) via Impeller, so sliders stay at frame rate with no
+CPU pixel work or byte round-trip. Export replays the same shader at full
+resolution (`GpuExporter`), so preview fidelity == export. Heavy CV/ML stays on
+native threads behind the FFI/`ChannelMlService` boundary.
+
+- Live tonal preview: `GpuPreview` + `AdjustmentsPainter` (GPU).
+- CPU engine (`DartImageEngine`) now only handles occasional structural ops; the
+  `ImageEngine` interface still allows swapping in a native FFI engine for those.
+
 ### Phase 4 — Pro suite depth
 - Layers/masks/blend modes, text engine, stickers.
 - Batch recipes, LUT import, color wheels, noise/HDR.

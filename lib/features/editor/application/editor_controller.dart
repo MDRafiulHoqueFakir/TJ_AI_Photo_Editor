@@ -1,46 +1,58 @@
-import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/dart_image_engine.dart';
+import '../../../core/services/gpu/adjustment_params.dart';
+import '../../../core/services/gpu/gpu_exporter.dart';
+import '../../../core/services/gpu/shader_loader.dart';
 import '../../../core/services/image_engine.dart';
 import '../domain/edit_node.dart';
 
 final imageEngineProvider = Provider<ImageEngine>((_) => const DartImageEngine());
 
-/// Editor session state: the original bytes + the non-destructive edit stack
-/// + an undo/redo history of stacks.
+/// Editor session state.
+///
+/// Pipeline: structural edits (crop/orient/retouch/body) are the CPU edit
+/// stack; their result is decoded into a GPU texture ([sourceImage]). The
+/// frequently-dragged tonal layer ([adjust]) runs entirely on the GPU via the
+/// fragment shader, so sliders stay at frame rate with no CPU work or byte
+/// round-trip. Structural edits are occasional and only then re-decode.
 @immutable
 class EditorState {
   const EditorState({
     this.original,
-    this.preview,
+    this.sourceImage,
+    this.adjust = AdjustmentParams.identity,
     this.stack = const [],
     this.redoStack = const [],
     this.isProcessing = false,
   });
 
   final Uint8List? original; // decoded source bytes
-  final Uint8List? preview; // rendered (downscaled) proxy shown on canvas
+  final ui.Image? sourceImage; // CPU-stack result, as a GPU texture
+  final AdjustmentParams adjust; // live tonal layer (GPU)
   final List<EditNode> stack;
   final List<List<EditNode>> redoStack;
   final bool isProcessing;
 
   bool get canUndo => stack.isNotEmpty;
   bool get canRedo => redoStack.isNotEmpty;
-  bool get hasImage => original != null;
+  bool get hasImage => sourceImage != null;
 
   EditorState copyWith({
     Uint8List? original,
-    Uint8List? preview,
+    ui.Image? sourceImage,
+    AdjustmentParams? adjust,
     List<EditNode>? stack,
     List<List<EditNode>>? redoStack,
     bool? isProcessing,
   }) {
     return EditorState(
       original: original ?? this.original,
-      preview: preview ?? this.preview,
+      sourceImage: sourceImage ?? this.sourceImage,
+      adjust: adjust ?? this.adjust,
       stack: stack ?? this.stack,
       redoStack: redoStack ?? this.redoStack,
       isProcessing: isProcessing ?? this.isProcessing,
@@ -50,34 +62,34 @@ class EditorState {
 
 class EditorController extends Notifier<EditorState> {
   @override
-  EditorState build() => const EditorState();
+  EditorState build() {
+    ref.onDispose(() => state.sourceImage?.dispose());
+    return const EditorState();
+  }
 
   ImageEngine get _engine => ref.read(imageEngineProvider);
 
   Future<void> loadImage(Uint8List bytes) async {
-    state = EditorState(original: bytes, preview: bytes);
+    state = EditorState(original: bytes);
+    await _render();
   }
 
-  /// Push a new node (e.g. live slider commit) and re-render the preview.
+  /// Live tonal update — GPU only, no CPU pixel work. Cheap enough per frame.
+  void updateAdjust(AdjustmentParams params) {
+    state = state.copyWith(adjust: params);
+  }
+
+  /// Push a structural node (crop/orient/retouch/body) and re-render the stack.
   Future<void> pushNode(EditNode node) async {
-    final newStack = [...state.stack, node];
-    state = state.copyWith(stack: newStack, redoStack: const [], isProcessing: true);
+    state = state.copyWith(
+      stack: [...state.stack, node],
+      redoStack: const [],
+      isProcessing: true,
+    );
     await _render();
   }
 
-  /// Replace the top adjust node while dragging (avoids stack spam).
-  Future<void> updateLiveAdjust(AdjustNode node) async {
-    final stack = [...state.stack];
-    if (stack.isNotEmpty && stack.last is AdjustNode) {
-      stack[stack.length - 1] = node;
-    } else {
-      stack.add(node);
-    }
-    state = state.copyWith(stack: stack, isProcessing: true);
-    await _render();
-  }
-
-  /// Live body-reshape drag: keeps a single top BodyReshapeNode.
+  /// Live body-reshape drag: keep a single top BodyReshapeNode.
   Future<void> updateLiveBody(BodyReshapeNode node) async {
     final stack = [...state.stack];
     if (stack.isNotEmpty && stack.last is BodyReshapeNode) {
@@ -111,7 +123,11 @@ class EditorController extends Notifier<EditorState> {
     _render();
   }
 
-  /// Re-runs the edit stack over the original to produce the preview.
+  /// Reset the live tonal layer to identity (does not touch structural stack).
+  void resetAdjust() => state = state.copyWith(adjust: AdjustmentParams.identity);
+
+  /// Runs the CPU structural stack over the original, then decodes the result
+  /// into a GPU texture the shader layer paints on top of.
   Future<void> _render() async {
     final original = state.original;
     if (original == null) return;
@@ -137,18 +153,28 @@ class EditorController extends Notifier<EditorState> {
         CropNode() => buffer, // freeform crop rect handled by native engine
       };
     }
-    state = state.copyWith(preview: buffer, isProcessing: false);
+
+    final decoded = await decodeUiImage(buffer);
+    state.sourceImage?.dispose();
+    state = state.copyWith(sourceImage: decoded, isProcessing: false);
   }
 
-  /// Full-res export. [watermark] is forced on for free tier by the caller.
+  /// Full-res export: replay the GPU tonal layer over the structural result at
+  /// source resolution, then stamp the watermark (free tier) via the CPU engine.
   Future<Uint8List?> export({
-    required ExportFormat format,
-    int quality = 90,
     required bool watermark,
+    ExportFormat format = ExportFormat.jpeg,
+    int quality = 95,
   }) async {
-    final preview = state.preview;
-    if (preview == null) return null;
-    return _engine.export(preview, format: format, quality: quality, watermark: watermark);
+    final src = state.sourceImage;
+    if (src == null) return null;
+
+    final program = await ref.read(adjustmentsProgramProvider.future);
+    final rendered = await GpuExporter(program).render(src, state.adjust);
+    if (rendered == null) return null;
+
+    if (!watermark) return rendered;
+    return _engine.export(rendered, format: format, quality: quality, watermark: true);
   }
 }
 

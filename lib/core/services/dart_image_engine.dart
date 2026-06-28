@@ -192,7 +192,7 @@ class DartImageEngine implements ImageEngine {
   }
 
   img.Image _stampWatermark(img.Image image) {
-    final text = 'TJ Photo Editor';
+    const text = 'TJ Photo Editor';
     img.drawString(
       image,
       text,

@@ -40,6 +40,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # GPU fragment shaders (Impeller) for real-time adjustments/filters.
+  shaders:
+    - shaders/adjustments.frag
+
   # assets:
   #   - assets/ml/            # bundled TFLite models (Phase 2)
   #   - assets/passport/standards.json
