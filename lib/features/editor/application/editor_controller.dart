@@ -3,9 +3,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/color_pipeline/image_renderer.dart';
 import '../../../core/services/dart_image_engine.dart';
 import '../../../core/services/gpu/adjustment_params.dart';
-import '../../../core/services/gpu/gpu_exporter.dart';
 import '../../../core/services/gpu/shader_loader.dart';
 import '../../../core/services/image_engine.dart';
 import '../domain/edit_node.dart';
@@ -169,8 +169,7 @@ class EditorController extends Notifier<EditorState> {
     final src = state.sourceImage;
     if (src == null) return null;
 
-    final program = await ref.read(adjustmentsProgramProvider.future);
-    final rendered = await GpuExporter(program).render(src, state.adjust);
+    final rendered = await ImageRenderer.render(src, state.adjust);
     if (rendered == null) return null;
 
     if (!watermark) return rendered;

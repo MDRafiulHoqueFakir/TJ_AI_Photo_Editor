@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,7 +13,7 @@ class HomeScreen extends ConsumerWidget {
   Future<void> _pickAndEdit(BuildContext context, WidgetRef ref) async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (picked == null) return;
-    final bytes = await File(picked.path).readAsBytes();
+    final bytes = await picked.readAsBytes(); // XFile API: works on web + native
     await ref.read(editorControllerProvider.notifier).loadImage(bytes);
     if (context.mounted) context.push(Routes.editor, extra: picked.path);
   }

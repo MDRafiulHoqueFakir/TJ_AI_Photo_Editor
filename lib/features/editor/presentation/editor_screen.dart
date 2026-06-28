@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_router.dart';
-import '../../../core/services/gpu/gpu_preview.dart';
+import '../../../core/services/color_pipeline/adjusted_image.dart';
 import '../../../core/services/image_engine.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../subscription/application/entitlement_provider.dart';
@@ -154,7 +154,7 @@ class _CanvasView extends StatelessWidget {
     // paints the current structural result + live tonal adjustments.
     final Widget canvas = comparing
         ? Image.memory(state.original!, gaplessPlayback: true)
-        : GpuPreview(image: state.sourceImage!, params: state.adjust);
+        : AdjustedImage(image: state.sourceImage!, params: state.adjust);
     return Stack(
       alignment: Alignment.center,
       children: [

@@ -1,6 +1,6 @@
 # TJ Photo Editor
 
-AI-powered cross-platform (iOS + Android) photo editing app built with Flutter.
+AI-powered cross-platform (iOS + Android + **Web**) photo editing app built with Flutter.
 
 > Combines premium retouching, AI body/face editing, generative AI, and
 > specialized tools (passport maker, object removal) with an **on-device-first**
@@ -44,6 +44,21 @@ flutter run
 
 `flutter create .` keeps existing `lib/` and `pubspec.yaml` and only adds the
 missing runner/platform scaffolding.
+
+### Run on web
+The same codebase runs as a web app (`android/`, `ios/`, and `web/` are all
+generated):
+
+```bash
+flutter run -d chrome          # live dev server + hot reload
+flutter build web              # production build → build/web/
+```
+
+**Cross-platform rendering note:** Flutter web does not support runtime fragment
+shaders, so the live tonal pipeline uses a GPU `ColorFilter` color-matrix
+(`core/services/color_pipeline/`) which is hardware-accelerated on web *and*
+mobile and renders identically on both. The GLSL shader in `shaders/` remains as
+a mobile-only advanced-effects hook.
 
 ## Architecture
 Feature-first clean architecture. UI in Flutter; the Phase-1 image engine is
