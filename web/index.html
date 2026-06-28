@@ -1,46 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="TJ Photo Editor — AI-powered photo editing in your browser.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="tj_photo_editor">
+  <meta name="apple-mobile-web-app-title" content="TJ Photo Editor">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>tj_photo_editor</title>
+  <title>TJ Photo Editor</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #0E0E12; }
+    /* Branded loading splash shown until the Flutter view mounts, so the page
+       never looks blank/dead during engine load or the first compile. */
+    #tj-splash {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 22px;
+      background: #0E0E12; z-index: 9999;
+      transition: opacity .35s ease; font-family: system-ui, sans-serif;
+    }
+    #tj-splash .badge {
+      width: 84px; height: 84px; border-radius: 22px;
+      background: linear-gradient(135deg, #7C5CFF, #00D9C0);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 12px 40px rgba(124, 92, 255, .35);
+    }
+    #tj-splash .badge svg { width: 44px; height: 44px; }
+    #tj-splash .title { color: #F4F4F6; font-size: 18px; font-weight: 600; letter-spacing: .3px; }
+    #tj-splash .ring {
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 3px solid #26262F; border-top-color: #7C5CFF;
+      animation: tj-spin .9s linear infinite;
+    }
+    @keyframes tj-spin { to { transform: rotate(360deg); } }
+    #tj-splash.hide { opacity: 0; pointer-events: none; }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="tj-splash">
+    <div class="badge">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 7a2 2 0 0 1 2-2h2l1.2-1.6A1 1 0 0 1 10 3h4a1 1 0 0 1 .8.4L16 5h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="#fff" stroke-width="1.6"/>
+        <circle cx="12" cy="12" r="3.2" stroke="#fff" stroke-width="1.6"/>
+      </svg>
+    </div>
+    <div class="title">TJ Photo Editor</div>
+    <div class="ring"></div>
+  </div>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+  <script>
+    // Remove the splash once Flutter has rendered its first frame.
+    (function () {
+      var splash = document.getElementById('tj-splash');
+      var observer = new MutationObserver(function () {
+        if (document.querySelector('flt-glass-pane, flutter-view')) {
+          splash.classList.add('hide');
+          setTimeout(function () { splash.remove(); }, 400);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    })();
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
