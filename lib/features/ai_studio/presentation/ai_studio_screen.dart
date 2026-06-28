@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../shared/widgets/coming_soon_sheet.dart';
 import '../../../shared/widgets/feature_grid.dart';
 import '../../subscription/application/entitlement_provider.dart';
 
@@ -50,9 +51,12 @@ class AiStudioScreen extends ConsumerWidget {
         return;
       }
     }
-    // Phase 3: invoke cloud action, debit on success.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${item.label}: runs in Phase 3 (cloud).')),
+    showComingSoon(
+      context,
+      title: item.label,
+      reason: item.tier == ToolTier.cloud
+          ? 'This is a generative tool that runs on our cloud GPUs. It unlocks once the AI inference backend is connected — your credits are ready to use.'
+          : 'On-device style presets are being bundled with the app.',
     );
   }
 

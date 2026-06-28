@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/services/color_pipeline/adjusted_image.dart';
@@ -27,6 +28,13 @@ class EditorScreen extends ConsumerStatefulWidget {
 class _EditorScreenState extends ConsumerState<EditorScreen> {
   EditorTool _activeTool = EditorTool.adjust;
   bool _comparing = false;
+
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    await ref.read(editorControllerProvider.notifier).loadImage(bytes);
+  }
 
   Future<void> _export() async {
     final ent = ref.read(entitlementProvider);
@@ -159,21 +167,29 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         children: [
           Expanded(
             child: GestureDetector(
-              onLongPressStart: (_) => setState(() => _comparing = true),
-              onLongPressEnd: (_) => setState(() => _comparing = false),
+              onLongPressStart:
+                  state.hasImage ? (_) => setState(() => _comparing = true) : null,
+              onLongPressEnd:
+                  state.hasImage ? (_) => setState(() => _comparing = false) : null,
               child: Container(
                 color: Colors.black,
                 width: double.infinity,
                 alignment: Alignment.center,
-                child: _CanvasView(state: state, comparing: _comparing),
+                child: _CanvasView(
+                  state: state,
+                  comparing: _comparing,
+                  onPick: _pickImage,
+                ),
               ),
             ),
           ),
-          _panelFor(_activeTool),
-          ToolRail(
-            active: _activeTool,
-            onSelect: (t) => setState(() => _activeTool = t),
-          ),
+          if (state.hasImage) ...[
+            _panelFor(_activeTool),
+            ToolRail(
+              active: _activeTool,
+              onSelect: (t) => setState(() => _activeTool = t),
+            ),
+          ],
         ],
       ),
     );
@@ -181,16 +197,35 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 }
 
 class _CanvasView extends StatelessWidget {
-  const _CanvasView({required this.state, required this.comparing});
+  const _CanvasView({
+    required this.state,
+    required this.comparing,
+    required this.onPick,
+  });
   final EditorState state;
   final bool comparing;
+  final VoidCallback onPick;
 
   @override
   Widget build(BuildContext context) {
     if (!state.hasImage) {
-      return const Text(
-        'No image loaded',
-        style: TextStyle(color: AppColors.textSecondary),
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.add_photo_alternate_outlined,
+              size: 64, color: AppColors.textSecondary,),
+          const SizedBox(height: 16),
+          const Text(
+            'Import a photo to start editing',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: onPick,
+            icon: const Icon(Icons.photo_library),
+            label: const Text('Choose photo'),
+          ),
+        ],
       );
     }
     // Hold-to-compare shows the untouched original; otherwise the GPU layer

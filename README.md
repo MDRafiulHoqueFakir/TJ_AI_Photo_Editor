@@ -10,19 +10,27 @@ AI-powered cross-platform (iOS + Android + **Web**) photo editing app built with
 - [Requirements (SRS)](docs/REQUIREMENTS.md)
 - [Project Flow & Roadmap](docs/PROJECT_FLOW.md)
 
-## Status — Phase 1 (MVP foundation) scaffold
+## Status — MVP complete (web + mobile), verified
 
-Implemented in this scaffold:
-- App shell: onboarding → home → editor navigation (`go_router`)
-- Riverpod state management, dark editor theme
-- **Non-destructive edit stack** with undo/redo (`editor/`)
-- Live brightness/contrast/saturation (pure-Dart engine, swappable for FFI/GPU)
-- Hold-to-compare, tool rail
-- Freemium gating: watermark on free export, paywall, credit model
-- AI Studio / Quick Tools / Passport screens with tier badges (flows wired, heavy
-  ops stubbed per the roadmap)
+Working end-to-end:
+- App shell: onboarding → home → editor navigation (`go_router`), Riverpod, dark theme
+- **Non-destructive edit stack** with undo/redo, hold-to-compare
+- **Live GPU tonal editing** (brightness/contrast/exposure/saturation/warmth/vignette)
+  via a cross-platform `ColorFilter` color-matrix — identical on web + mobile
+- Crop / rotate / flip, skin retouch, body reshape (CPU engine; FFI/GPU swap-ready)
+- **Export & download** the result (web download / native file save)
+- **Passport / ID maker** — crop to exact standard dimensions + printable 6×4" sheet
+- **Upscale 2×** (cubic) — real, on-device
+- Freemium gating: watermark on free export, paywall, credit-badged tiles
+- Consistent "coming soon" UX for features awaiting ML models / cloud backend
 
-See [PROJECT_FLOW.md](docs/PROJECT_FLOW.md) §5 for what lands in Phases 2–4.
+Intentionally pending (need bundled ML models or a cloud backend): on-device
+face/body detection, segmentation, object removal, super-res; cloud generative
+(hair, AI art, generative fill); auto background removal. See
+[PROJECT_FLOW.md](docs/PROJECT_FLOW.md) and [NATIVE_ML_BRIDGE.md](docs/NATIVE_ML_BRIDGE.md).
+
+Verified on Flutter 3.44.4: `flutter analyze` clean, tests pass, `flutter build web`
+succeeds, app runs in-browser with no console errors.
 
 ## Prerequisites
 - **Flutter SDK 3.22+** (not currently installed on this machine — install from
