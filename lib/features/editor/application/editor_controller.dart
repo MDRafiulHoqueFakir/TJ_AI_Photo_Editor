@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/color_pipeline/filter_presets.dart';
 import '../../../core/services/color_pipeline/image_renderer.dart';
 import '../../../core/services/dart_image_engine.dart';
 import '../../../core/services/gpu/adjustment_params.dart';
@@ -25,6 +26,7 @@ class EditorState {
     this.original,
     this.sourceImage,
     this.adjust = AdjustmentParams.identity,
+    this.filterId = '',
     this.stack = const [],
     this.redoStack = const [],
     this.isProcessing = false,
@@ -33,6 +35,7 @@ class EditorState {
   final Uint8List? original; // decoded source bytes
   final ui.Image? sourceImage; // CPU-stack result, as a GPU texture
   final AdjustmentParams adjust; // live tonal layer (GPU)
+  final String filterId; // selected style filter ('' = none)
   final List<EditNode> stack;
   final List<List<EditNode>> redoStack;
   final bool isProcessing;
@@ -41,10 +44,14 @@ class EditorState {
   bool get canRedo => redoStack.isNotEmpty;
   bool get hasImage => sourceImage != null;
 
+  /// Resolved style-filter matrix for the GPU pipeline (null when none).
+  List<double>? get filterMatrix => FilterPreset.byId(filterId)?.matrix;
+
   EditorState copyWith({
     Uint8List? original,
     ui.Image? sourceImage,
     AdjustmentParams? adjust,
+    String? filterId,
     List<EditNode>? stack,
     List<List<EditNode>>? redoStack,
     bool? isProcessing,
@@ -53,6 +60,7 @@ class EditorState {
       original: original ?? this.original,
       sourceImage: sourceImage ?? this.sourceImage,
       adjust: adjust ?? this.adjust,
+      filterId: filterId ?? this.filterId,
       stack: stack ?? this.stack,
       redoStack: redoStack ?? this.redoStack,
       isProcessing: isProcessing ?? this.isProcessing,
@@ -126,6 +134,9 @@ class EditorController extends Notifier<EditorState> {
   /// Reset the live tonal layer to identity (does not touch structural stack).
   void resetAdjust() => state = state.copyWith(adjust: AdjustmentParams.identity);
 
+  /// Select a style filter ('' clears it). GPU-only, no CPU work.
+  void selectFilter(String id) => state = state.copyWith(filterId: id);
+
   /// Runs the CPU structural stack over the original, then decodes the result
   /// into a GPU texture the shader layer paints on top of.
   Future<void> _render() async {
@@ -169,7 +180,11 @@ class EditorController extends Notifier<EditorState> {
     final src = state.sourceImage;
     if (src == null) return null;
 
-    final rendered = await ImageRenderer.render(src, state.adjust);
+    final rendered = await ImageRenderer.render(
+      src,
+      state.adjust,
+      filterMatrix: state.filterMatrix,
+    );
     if (rendered == null) return null;
 
     if (!watermark) return rendered;

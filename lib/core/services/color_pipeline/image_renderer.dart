@@ -11,6 +11,7 @@ abstract class ImageRenderer {
   static Future<Uint8List?> render(
     ui.Image source,
     AdjustmentParams params, {
+    List<double>? filterMatrix,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
   }) async {
     final w = source.width;
@@ -23,7 +24,7 @@ abstract class ImageRenderer {
       source,
       ui.Offset.zero,
       ui.Paint()
-        ..colorFilter = buildColorFilter(params)
+        ..colorFilter = composedColorFilter(params, filterMatrix)
         ..filterQuality = ui.FilterQuality.high,
     );
 

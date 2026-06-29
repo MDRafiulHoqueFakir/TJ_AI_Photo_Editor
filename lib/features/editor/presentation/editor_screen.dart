@@ -14,6 +14,7 @@ import '../application/editor_controller.dart';
 import 'widgets/adjust_panel.dart';
 import 'widgets/body_panel.dart';
 import 'widgets/crop_panel.dart';
+import 'widgets/filter_panel.dart';
 import 'widgets/retouch_panel.dart';
 import 'widgets/tool_rail.dart';
 
@@ -132,6 +133,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       EditorTool.retouch => const RetouchPanel(),
       EditorTool.body => const BodyPanel(),
       EditorTool.crop => const CropPanel(),
+      EditorTool.filter => const FilterPanel(),
       _ => _ComingSoonPanel(tool: tool),
     };
   }
@@ -232,7 +234,11 @@ class _CanvasView extends StatelessWidget {
     // paints the current structural result + live tonal adjustments.
     final Widget canvas = comparing
         ? Image.memory(state.original!, gaplessPlayback: true)
-        : AdjustedImage(image: state.sourceImage!, params: state.adjust);
+        : AdjustedImage(
+            image: state.sourceImage!,
+            params: state.adjust,
+            filterMatrix: state.filterMatrix,
+          );
     return Stack(
       alignment: Alignment.center,
       children: [

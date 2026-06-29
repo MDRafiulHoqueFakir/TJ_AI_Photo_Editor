@@ -56,7 +56,7 @@ class AiStudioScreen extends ConsumerWidget {
       title: item.label,
       reason: item.tier == ToolTier.cloud
           ? 'This is a generative tool that runs on our cloud GPUs. It unlocks once the AI inference backend is connected — your credits are ready to use.'
-          : 'On-device style presets are being bundled with the app.',
+          : 'Style presets are live! Open a photo in the Editor and tap the Filter tab to apply Vivid, Mono, Noir, Sepia, Vintage and more.',
     );
   }
 

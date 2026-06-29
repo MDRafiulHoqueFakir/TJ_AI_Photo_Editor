@@ -10,10 +10,16 @@ import 'color_adjustments.dart';
 /// rebuilds the (cheap) filter, the GPU re-composites the same uploaded texture.
 /// Vignette is painted as a radial overlay since it is spatial.
 class AdjustedImage extends StatelessWidget {
-  const AdjustedImage({super.key, required this.image, required this.params});
+  const AdjustedImage({
+    super.key,
+    required this.image,
+    required this.params,
+    this.filterMatrix,
+  });
 
   final ui.Image image;
   final AdjustmentParams params;
+  final List<double>? filterMatrix; // optional style-filter, composed under tonal
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +27,7 @@ class AdjustedImage extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         ColorFiltered(
-          colorFilter: buildColorFilter(params),
+          colorFilter: composedColorFilter(params, filterMatrix),
           child: RawImage(image: image, fit: BoxFit.contain),
         ),
         if (params.vignette > 0)
