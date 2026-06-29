@@ -19,6 +19,8 @@ Working end-to-end:
   via a cross-platform `ColorFilter` color-matrix — identical on web + mobile
 - **Style filters** (Vivid, Mono, Noir, Sepia, Warm, Cool, Fade, Vintage) with live
   thumbnails — GPU color matrices composed under the tonal layer, cross-platform
+- **Text overlays** — add/drag/style text on the photo (size, color, bold),
+  baked into the export at full resolution
 - Crop / rotate / flip, skin retouch, body reshape (CPU engine; FFI/GPU swap-ready)
 - **Export & download** the result (web download / native file save)
 - **Passport / ID maker** — crop to exact standard dimensions + printable 6×4" sheet

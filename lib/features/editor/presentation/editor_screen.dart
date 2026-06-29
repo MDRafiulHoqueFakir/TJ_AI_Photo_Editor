@@ -16,6 +16,8 @@ import 'widgets/body_panel.dart';
 import 'widgets/crop_panel.dart';
 import 'widgets/filter_panel.dart';
 import 'widgets/retouch_panel.dart';
+import 'widgets/text_layer.dart';
+import 'widgets/text_panel.dart';
 import 'widgets/tool_rail.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
@@ -134,6 +136,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       EditorTool.body => const BodyPanel(),
       EditorTool.crop => const CropPanel(),
       EditorTool.filter => const FilterPanel(),
+      EditorTool.text => const TextPanel(),
       _ => _ComingSoonPanel(tool: tool),
     };
   }
@@ -181,6 +184,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                   state: state,
                   comparing: _comparing,
                   onPick: _pickImage,
+                  onDragOverlay:
+                      ref.read(editorControllerProvider.notifier).dragOverlay,
+                  onSelectOverlay:
+                      ref.read(editorControllerProvider.notifier).selectOverlay,
                 ),
               ),
             ),
@@ -203,10 +210,14 @@ class _CanvasView extends StatelessWidget {
     required this.state,
     required this.comparing,
     required this.onPick,
+    required this.onDragOverlay,
+    required this.onSelectOverlay,
   });
   final EditorState state;
   final bool comparing;
   final VoidCallback onPick;
+  final void Function(String id, double ddx, double ddy) onDragOverlay;
+  final void Function(String? id) onSelectOverlay;
 
   @override
   Widget build(BuildContext context) {
@@ -214,8 +225,11 @@ class _CanvasView extends StatelessWidget {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.add_photo_alternate_outlined,
-              size: 64, color: AppColors.textSecondary,),
+          const Icon(
+            Icons.add_photo_alternate_outlined,
+            size: 64,
+            color: AppColors.textSecondary,
+          ),
           const SizedBox(height: 16),
           const Text(
             'Import a photo to start editing',
@@ -230,35 +244,76 @@ class _CanvasView extends StatelessWidget {
         ],
       );
     }
-    // Hold-to-compare shows the untouched original; otherwise the GPU layer
-    // paints the current structural result + live tonal adjustments.
-    final Widget canvas = comparing
-        ? Image.memory(state.original!, gaplessPlayback: true)
-        : AdjustedImage(
-            image: state.sourceImage!,
-            params: state.adjust,
-            filterMatrix: state.filterMatrix,
-          );
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        InteractiveViewer(maxScale: 5, child: canvas),
-        if (state.isProcessing)
-          const Positioned(
-            top: 12,
-            child: SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+
+    final image = state.sourceImage!;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final box = Size(constraints.maxWidth, constraints.maxHeight);
+        final rect = _containRect(image.width / image.height, box);
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onSelectOverlay(null), // tap empty space deselects
+          child: Stack(
+            children: [
+              Positioned.fromRect(
+                rect: rect,
+                child: comparing
+                    ? Image.memory(state.original!,
+                        fit: BoxFit.contain, gaplessPlayback: true,)
+                    : AdjustedImage(
+                        image: image,
+                        params: state.adjust,
+                        filterMatrix: state.filterMatrix,
+                      ),
+              ),
+              if (!comparing)
+                Positioned.fromRect(
+                  rect: rect,
+                  child: TextLayer(
+                    width: rect.width,
+                    height: rect.height,
+                    overlays: state.overlays,
+                    selectedId: state.selectedOverlayId,
+                    onDragDelta: onDragOverlay,
+                    onSelect: onSelectOverlay,
+                  ),
+                ),
+              if (state.isProcessing)
+                const Positioned(
+                  top: 12,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+              if (comparing)
+                const Positioned(
+                  bottom: 12,
+                  left: 0,
+                  right: 0,
+                  child: Center(child: Chip(label: Text('Original'))),
+                ),
+            ],
           ),
-        if (comparing)
-          const Positioned(
-            bottom: 12,
-            child: Chip(label: Text('Original')),
-          ),
-      ],
+        );
+      },
     );
+  }
+
+  /// Largest rect with the image's aspect that fits inside [box] (contain).
+  Rect _containRect(double aspect, Size box) {
+    var w = box.width;
+    var h = w / aspect;
+    if (h > box.height) {
+      h = box.height;
+      w = h * aspect;
+    }
+    return Rect.fromLTWH((box.width - w) / 2, (box.height - h) / 2, w, h);
   }
 }
 

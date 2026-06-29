@@ -12,6 +12,7 @@ abstract class ImageRenderer {
     ui.Image source,
     AdjustmentParams params, {
     List<double>? filterMatrix,
+    void Function(ui.Canvas canvas, ui.Size size)? overlay,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
   }) async {
     final w = source.width;
@@ -38,6 +39,9 @@ abstract class ImageRenderer {
       );
       canvas.drawRect(rect, ui.Paint()..shader = shader);
     }
+
+    // Spatial overlays (e.g. text layers) drawn on top at full resolution.
+    overlay?.call(canvas, ui.Size(w.toDouble(), h.toDouble()));
 
     final picture = recorder.endRecording();
     final outImage = await picture.toImage(w, h);

@@ -58,4 +58,39 @@ void main() {
       expect((state.stack.single as BodyReshapeNode).slim, 0.5);
     });
   });
+
+  group('text overlays', () {
+    late ProviderContainer container;
+    setUp(() => container = ProviderContainer());
+    tearDown(() => container.dispose());
+
+    test('addText adds an overlay and selects it', () {
+      final n = container.read(editorControllerProvider.notifier);
+      n.addText('Hello');
+      final s = container.read(editorControllerProvider);
+      expect(s.overlays.length, 1);
+      expect(s.overlays.single.text, 'Hello');
+      expect(s.selectedOverlayId, s.overlays.single.id);
+    });
+
+    test('dragOverlay clamps position to 0..1', () {
+      final n = container.read(editorControllerProvider.notifier);
+      n.addText('x');
+      final id = container.read(editorControllerProvider).overlays.single.id;
+      n.dragOverlay(id, -5, 5); // way out of bounds both directions
+      final o = container.read(editorControllerProvider).overlays.single;
+      expect(o.dx, 0.0);
+      expect(o.dy, 1.0);
+    });
+
+    test('removeOverlay deletes it and clears selection', () {
+      final n = container.read(editorControllerProvider.notifier);
+      n.addText('x');
+      final id = container.read(editorControllerProvider).overlays.single.id;
+      n.removeOverlay(id);
+      final s = container.read(editorControllerProvider);
+      expect(s.overlays, isEmpty);
+      expect(s.selectedOverlayId, isNull);
+    });
+  });
 }

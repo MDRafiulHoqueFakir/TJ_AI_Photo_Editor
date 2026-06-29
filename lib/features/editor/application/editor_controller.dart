@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/services/color_pipeline/filter_presets.dart';
 import '../../../core/services/color_pipeline/image_renderer.dart';
@@ -10,6 +11,7 @@ import '../../../core/services/gpu/adjustment_params.dart';
 import '../../../core/services/gpu/shader_loader.dart';
 import '../../../core/services/image_engine.dart';
 import '../domain/edit_node.dart';
+import '../domain/text_overlay.dart';
 
 final imageEngineProvider = Provider<ImageEngine>((_) => const DartImageEngine());
 
@@ -27,6 +29,8 @@ class EditorState {
     this.sourceImage,
     this.adjust = AdjustmentParams.identity,
     this.filterId = '',
+    this.overlays = const [],
+    this.selectedOverlayId,
     this.stack = const [],
     this.redoStack = const [],
     this.isProcessing = false,
@@ -36,6 +40,8 @@ class EditorState {
   final ui.Image? sourceImage; // CPU-stack result, as a GPU texture
   final AdjustmentParams adjust; // live tonal layer (GPU)
   final String filterId; // selected style filter ('' = none)
+  final List<TextOverlay> overlays; // draggable text layers
+  final String? selectedOverlayId;
   final List<EditNode> stack;
   final List<List<EditNode>> redoStack;
   final bool isProcessing;
@@ -52,6 +58,8 @@ class EditorState {
     ui.Image? sourceImage,
     AdjustmentParams? adjust,
     String? filterId,
+    List<TextOverlay>? overlays,
+    Object? selectedOverlayId = _noChange,
     List<EditNode>? stack,
     List<List<EditNode>>? redoStack,
     bool? isProcessing,
@@ -61,12 +69,19 @@ class EditorState {
       sourceImage: sourceImage ?? this.sourceImage,
       adjust: adjust ?? this.adjust,
       filterId: filterId ?? this.filterId,
+      overlays: overlays ?? this.overlays,
+      selectedOverlayId: selectedOverlayId == _noChange
+          ? this.selectedOverlayId
+          : selectedOverlayId as String?,
       stack: stack ?? this.stack,
       redoStack: redoStack ?? this.redoStack,
       isProcessing: isProcessing ?? this.isProcessing,
     );
   }
 }
+
+/// Sentinel so copyWith can distinguish "leave selectedOverlayId" from "clear it".
+const Object _noChange = Object();
 
 class EditorController extends Notifier<EditorState> {
   @override
@@ -137,6 +152,57 @@ class EditorController extends Notifier<EditorState> {
   /// Select a style filter ('' clears it). GPU-only, no CPU work.
   void selectFilter(String id) => state = state.copyWith(filterId: id);
 
+  // ---- Text overlays ----
+
+  final _uuid = const Uuid();
+
+  void addText(String text) {
+    final overlay = TextOverlay(id: _uuid.v4(), text: text);
+    state = state.copyWith(
+      overlays: [...state.overlays, overlay],
+      selectedOverlayId: overlay.id,
+    );
+  }
+
+  void selectOverlay(String? id) =>
+      state = state.copyWith(selectedOverlayId: id);
+
+  void updateOverlay(String id, TextOverlay Function(TextOverlay) update) {
+    state = state.copyWith(
+      overlays: [
+        for (final o in state.overlays) if (o.id == id) update(o) else o,
+      ],
+    );
+  }
+
+  /// Drag an overlay by image-relative deltas (reads current pos each call, so
+  /// repeated drag events never use a stale closure value).
+  void dragOverlay(String id, double ddx, double ddy) {
+    updateOverlay(
+      id,
+      (o) => o.copyWith(
+        dx: (o.dx + ddx).clamp(0.0, 1.0),
+        dy: (o.dy + ddy).clamp(0.0, 1.0),
+      ),
+    );
+  }
+
+  void removeOverlay(String id) {
+    state = state.copyWith(
+      overlays: state.overlays.where((o) => o.id != id).toList(),
+      selectedOverlayId: null,
+    );
+  }
+
+  TextOverlay? get selectedOverlay {
+    final id = state.selectedOverlayId;
+    if (id == null) return null;
+    for (final o in state.overlays) {
+      if (o.id == id) return o;
+    }
+    return null;
+  }
+
   /// Runs the CPU structural stack over the original, then decodes the result
   /// into a GPU texture the shader layer paints on top of.
   Future<void> _render() async {
@@ -180,10 +246,14 @@ class EditorController extends Notifier<EditorState> {
     final src = state.sourceImage;
     if (src == null) return null;
 
+    final overlays = state.overlays;
     final rendered = await ImageRenderer.render(
       src,
       state.adjust,
       filterMatrix: state.filterMatrix,
+      overlay: overlays.isEmpty
+          ? null
+          : (canvas, size) => paintTextOverlays(canvas, size, overlays),
     );
     if (rendered == null) return null;
 
