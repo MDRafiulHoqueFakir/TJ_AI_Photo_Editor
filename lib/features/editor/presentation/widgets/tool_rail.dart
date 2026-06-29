@@ -10,6 +10,7 @@ enum EditorTool {
   filter(Icons.filter_vintage, 'Filter'),
   text(Icons.title, 'Text'),
   sticker(Icons.emoji_emotions, 'Sticker'),
+  frame(Icons.border_outer, 'Frame'),
   layers(Icons.layers, 'Layers'),
   crop(Icons.crop, 'Crop');
 

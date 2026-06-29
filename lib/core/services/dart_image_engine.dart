@@ -167,6 +167,31 @@ class DartImageEngine implements ImageEngine {
   }
 
   @override
+  Future<Uint8List> frame(
+    Uint8List source, {
+    required int borderPx,
+    required int bottomExtraPx,
+    required int colorArgb,
+  }) async {
+    final image = img.decodeImage(source);
+    if (image == null) return source;
+    if (borderPx <= 0 && bottomExtraPx <= 0) return source;
+
+    final a = (colorArgb >> 24) & 0xFF;
+    final r = (colorArgb >> 16) & 0xFF;
+    final g = (colorArgb >> 8) & 0xFF;
+    final b = colorArgb & 0xFF;
+
+    final canvas = img.Image(
+      width: image.width + borderPx * 2,
+      height: image.height + borderPx * 2 + bottomExtraPx,
+    );
+    img.fill(canvas, color: img.ColorRgba8(r, g, b, a));
+    img.compositeImage(canvas, image, dstX: borderPx, dstY: borderPx);
+    return Uint8List.fromList(img.encodeJpg(canvas, quality: 95));
+  }
+
+  @override
   Future<Uint8List> export(
     Uint8List source, {
     required ExportFormat format,

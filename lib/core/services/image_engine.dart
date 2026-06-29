@@ -47,6 +47,15 @@ abstract interface class ImageEngine {
     required int bgArgb,
   });
 
+  /// Wrap [source] in a solid border. [bottomExtraPx] adds extra bottom margin
+  /// (polaroid look). Output dimensions grow by the border on all sides.
+  Future<Uint8List> frame(
+    Uint8List source, {
+    required int borderPx,
+    required int bottomExtraPx,
+    required int colorArgb,
+  });
+
   /// Encode the working buffer for export.
   Future<Uint8List> export(
     Uint8List source, {

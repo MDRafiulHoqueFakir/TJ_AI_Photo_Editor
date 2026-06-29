@@ -83,6 +83,17 @@ void main() {
       expect(o.dy, 1.0);
     });
 
+    test('selectFrame resolves the frame preset', () {
+      final n = container.read(editorControllerProvider.notifier);
+      n.selectFrame('polaroid');
+      final f = container.read(editorControllerProvider).frame;
+      expect(f, isNotNull);
+      expect(f!.id, 'polaroid');
+      expect(f.bottomExtra, greaterThan(0));
+      n.selectFrame(''); // '' = no frame selected
+      expect(container.read(editorControllerProvider).frame, isNull);
+    });
+
     test('addSticker marks the overlay as a sticker', () {
       final n = container.read(editorControllerProvider.notifier);
       n.addSticker('🔥');

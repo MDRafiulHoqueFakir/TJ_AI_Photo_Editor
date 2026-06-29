@@ -11,6 +11,7 @@ import '../../../core/services/gpu/adjustment_params.dart';
 import '../../../core/services/gpu/shader_loader.dart';
 import '../../../core/services/image_engine.dart';
 import '../domain/edit_node.dart';
+import '../domain/frame_preset.dart';
 import '../domain/text_overlay.dart';
 
 final imageEngineProvider = Provider<ImageEngine>((_) => const DartImageEngine());
@@ -29,6 +30,7 @@ class EditorState {
     this.sourceImage,
     this.adjust = AdjustmentParams.identity,
     this.filterId = '',
+    this.frameId = '',
     this.overlays = const [],
     this.selectedOverlayId,
     this.stack = const [],
@@ -40,6 +42,7 @@ class EditorState {
   final ui.Image? sourceImage; // CPU-stack result, as a GPU texture
   final AdjustmentParams adjust; // live tonal layer (GPU)
   final String filterId; // selected style filter ('' = none)
+  final String frameId; // selected frame ('' = none)
   final List<TextOverlay> overlays; // draggable text layers
   final String? selectedOverlayId;
   final List<EditNode> stack;
@@ -53,11 +56,15 @@ class EditorState {
   /// Resolved style-filter matrix for the GPU pipeline (null when none).
   List<double>? get filterMatrix => FilterPreset.byId(filterId)?.matrix;
 
+  /// Resolved frame (null/none when no border).
+  FramePreset? get frame => FramePreset.byId(frameId);
+
   EditorState copyWith({
     Uint8List? original,
     ui.Image? sourceImage,
     AdjustmentParams? adjust,
     String? filterId,
+    String? frameId,
     List<TextOverlay>? overlays,
     Object? selectedOverlayId = _noChange,
     List<EditNode>? stack,
@@ -69,6 +76,7 @@ class EditorState {
       sourceImage: sourceImage ?? this.sourceImage,
       adjust: adjust ?? this.adjust,
       filterId: filterId ?? this.filterId,
+      frameId: frameId ?? this.frameId,
       overlays: overlays ?? this.overlays,
       selectedOverlayId: selectedOverlayId == _noChange
           ? this.selectedOverlayId
@@ -151,6 +159,9 @@ class EditorController extends Notifier<EditorState> {
 
   /// Select a style filter ('' clears it). GPU-only, no CPU work.
   void selectFilter(String id) => state = state.copyWith(filterId: id);
+
+  /// Select a frame/border ('' clears it).
+  void selectFrame(String id) => state = state.copyWith(frameId: id);
 
   // ---- Text overlays ----
 
@@ -261,7 +272,7 @@ class EditorController extends Notifier<EditorState> {
     if (src == null) return null;
 
     final overlays = state.overlays;
-    final rendered = await ImageRenderer.render(
+    var rendered = await ImageRenderer.render(
       src,
       state.adjust,
       filterMatrix: state.filterMatrix,
@@ -270,6 +281,19 @@ class EditorController extends Notifier<EditorState> {
           : (canvas, size) => paintTextOverlays(canvas, size, overlays),
     );
     if (rendered == null) return null;
+
+    // Frame/border: grows output dimensions; fractions are of the shorter side.
+    final frame = state.frame;
+    if (frame != null && !frame.isNone) {
+      final minSide =
+          src.width < src.height ? src.width : src.height;
+      rendered = await _engine.frame(
+        rendered,
+        borderPx: (frame.border * minSide).round(),
+        bottomExtraPx: (frame.bottomExtra * minSide).round(),
+        colorArgb: frame.color,
+      );
+    }
 
     if (!watermark) return rendered;
     return _engine.export(rendered, format: format, quality: quality, watermark: true);

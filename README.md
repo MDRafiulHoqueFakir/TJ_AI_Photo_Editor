@@ -22,6 +22,7 @@ Working end-to-end:
 - **Text overlays** — add/drag/style text on the photo (size, color, bold),
   baked into the export at full resolution
 - **Emoji stickers** — drop, drag, and resize emoji stickers (no bundled assets)
+- **Frames & borders** — White, Black, Soft, Film, Polaroid; live preview, baked into export
 - Crop / rotate / flip, skin retouch, body reshape (CPU engine; FFI/GPU swap-ready)
 - **Export & download** the result (web download / native file save)
 - **Passport / ID maker** — crop to exact standard dimensions + printable 6×4" sheet

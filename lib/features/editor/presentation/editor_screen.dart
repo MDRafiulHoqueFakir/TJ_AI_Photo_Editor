@@ -15,6 +15,7 @@ import 'widgets/adjust_panel.dart';
 import 'widgets/body_panel.dart';
 import 'widgets/crop_panel.dart';
 import 'widgets/filter_panel.dart';
+import 'widgets/frame_panel.dart';
 import 'widgets/retouch_panel.dart';
 import 'widgets/sticker_panel.dart';
 import 'widgets/text_layer.dart';
@@ -139,6 +140,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       EditorTool.filter => const FilterPanel(),
       EditorTool.text => const TextPanel(),
       EditorTool.sticker => const StickerPanel(),
+      EditorTool.frame => const FramePanel(),
       _ => _ComingSoonPanel(tool: tool),
     };
   }
@@ -248,17 +250,41 @@ class _CanvasView extends StatelessWidget {
     }
 
     final image = state.sourceImage!;
+    final w = image.width.toDouble();
+    final h = image.height.toDouble();
+    // Frame (hidden while comparing to the original).
+    final frame = comparing ? null : state.frame;
+    final hasFrame = frame != null && !frame.isNone;
+    final minSide = w < h ? w : h;
+    final b = hasFrame ? frame.border * minSide : 0.0;
+    final bottom = hasFrame ? frame.bottomExtra * minSide : 0.0;
+    final framedAspect = (w + 2 * b) / (h + 2 * b + bottom);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final box = Size(constraints.maxWidth, constraints.maxHeight);
-        final rect = _containRect(image.width / image.height, box);
+        final outer = _containRect(framedAspect, box);
+        final scale = outer.width / (w + 2 * b);
+        final bs = b * scale;
+        final bottomS = bottom * scale;
+        final inner = Rect.fromLTWH(
+          outer.left + bs,
+          outer.top + bs,
+          outer.width - 2 * bs,
+          outer.height - 2 * bs - bottomS,
+        );
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => onSelectOverlay(null), // tap empty space deselects
           child: Stack(
             children: [
+              if (hasFrame)
+                Positioned.fromRect(
+                  rect: outer,
+                  child: ColoredBox(color: Color(frame.color)),
+                ),
               Positioned.fromRect(
-                rect: rect,
+                rect: inner,
                 child: comparing
                     ? Image.memory(state.original!,
                         fit: BoxFit.contain, gaplessPlayback: true,)
@@ -270,10 +296,10 @@ class _CanvasView extends StatelessWidget {
               ),
               if (!comparing)
                 Positioned.fromRect(
-                  rect: rect,
+                  rect: inner,
                   child: TextLayer(
-                    width: rect.width,
-                    height: rect.height,
+                    width: inner.width,
+                    height: inner.height,
                     overlays: state.overlays,
                     selectedId: state.selectedOverlayId,
                     onDragDelta: onDragOverlay,
