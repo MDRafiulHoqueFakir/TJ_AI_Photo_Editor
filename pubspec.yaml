@@ -26,8 +26,9 @@ dependencies:
   shared_preferences: ^2.2.3
   path_provider: ^2.1.3
 
-  # Monetization (RevenueCat) — wire keys before release
-  purchases_flutter: ^8.0.0
+  # Monetization (RevenueCat) — re-add when wiring real subscriptions.
+  # (Removed for now so the app builds on Windows desktop, which it lacks.)
+  # purchases_flutter: ^8.0.0
 
   # Save/export the edited image (web triggers a download; native writes a file)
   file_saver: ^0.4.0

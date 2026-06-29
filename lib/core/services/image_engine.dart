@@ -18,6 +18,11 @@ abstract interface class ImageEngine {
   /// Resize to target dimensions (Lanczos in the native impl).
   Future<Uint8List> resize(Uint8List source, {required int width, required int height});
 
+  /// Downscale so the longest edge is at most [maxLongEdge] (keeps aspect).
+  /// Returns the source unchanged if it already fits. Used to bound the working
+  /// image so on-device pixel ops can't exhaust memory / crash on huge photos.
+  Future<Uint8List> fitWithin(Uint8List source, {required int maxLongEdge});
+
   /// Crop to a pixel rectangle.
   Future<Uint8List> crop(
     Uint8List source, {

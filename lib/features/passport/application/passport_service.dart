@@ -24,7 +24,10 @@ class PassportSpec {
 
   static const catalog = <PassportSpec>[
     PassportSpec(name: 'US Passport / Visa', widthMm: 50.8, heightMm: 50.8),
-    PassportSpec(name: 'Schengen Visa', widthMm: 35, heightMm: 45, bgLabel: 'Light grey'),
+    PassportSpec(name: 'Bangladesh Passport', widthMm: 45, heightMm: 55),
+    PassportSpec(name: 'Canada Passport', widthMm: 50, heightMm: 70),
+    PassportSpec(name: 'Europe / Schengen', widthMm: 35, heightMm: 45, bgLabel: 'Light grey'),
+    PassportSpec(name: 'Middle East (Gulf)', widthMm: 40, heightMm: 60),
     PassportSpec(name: 'India Passport', widthMm: 35, heightMm: 45),
     PassportSpec(name: 'UK Passport', widthMm: 35, heightMm: 45, bgLabel: 'Cream'),
     PassportSpec(name: 'China Visa', widthMm: 33, heightMm: 48),

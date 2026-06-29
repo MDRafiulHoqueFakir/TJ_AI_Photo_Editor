@@ -55,6 +55,22 @@ class DartImageEngine implements ImageEngine {
   }
 
   @override
+  Future<Uint8List> fitWithin(Uint8List source, {required int maxLongEdge}) async {
+    final image = img.decodeImage(source);
+    if (image == null) return source;
+    final longest = image.width > image.height ? image.width : image.height;
+    if (longest <= maxLongEdge) return source;
+    final scale = maxLongEdge / longest;
+    final out = img.copyResize(
+      image,
+      width: (image.width * scale).round(),
+      height: (image.height * scale).round(),
+      interpolation: img.Interpolation.average,
+    );
+    return Uint8List.fromList(img.encodeJpg(out, quality: 92));
+  }
+
+  @override
   Future<Uint8List> crop(
     Uint8List source, {
     required int x,

@@ -6,7 +6,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../shared/widgets/coming_soon_sheet.dart';
 import '../../../shared/widgets/feature_grid.dart';
-import '../../subscription/application/entitlement_provider.dart';
 
 class AiStudioScreen extends ConsumerWidget {
   const AiStudioScreen({super.key});
@@ -27,8 +26,7 @@ class AiStudioScreen extends ConsumerWidget {
     FeatureItem(
       icon: Icons.brush,
       label: 'AI Art',
-      tier: ToolTier.cloud,
-      creditKey: 'ai_art_prompt',
+      tier: ToolTier.free, // works on-device now
     ),
     FeatureItem(
       icon: Icons.wallpaper,
@@ -44,19 +42,26 @@ class AiStudioScreen extends ConsumerWidget {
   ];
 
   void _onTap(BuildContext context, WidgetRef ref, FeatureItem item) {
-    if (item.tier == ToolTier.cloud) {
-      final notifier = ref.read(entitlementProvider.notifier);
-      if (!notifier.canAfford(item.creditKey!)) {
-        context.push(Routes.paywall);
-        return;
-      }
+    // Working on-device tools route to real screens.
+    if (item.label == 'AI Art') {
+      context.push(Routes.aiArt);
+      return;
     }
+    if (item.label == 'Style Presets') {
+      showComingSoon(
+        context,
+        title: item.label,
+        reason:
+            'Style presets are live in the Editor — open a photo and tap the Filter tab for Vivid, Mono, Noir, Sepia, Vintage and more.',
+      );
+      return;
+    }
+    // Remaining tools are genuinely generative (need the cloud AI backend).
     showComingSoon(
       context,
       title: item.label,
-      reason: item.tier == ToolTier.cloud
-          ? 'This is a generative tool that runs on our cloud GPUs. It unlocks once the AI inference backend is connected — your credits are ready to use.'
-          : 'Style presets are live! Open a photo in the Editor and tap the Filter tab to apply Vivid, Mono, Noir, Sepia, Vintage and more.',
+      reason:
+          'This is a generative tool (e.g. new hair, fill, background) that runs on cloud GPUs. It turns on once the AI image-generation backend is connected. Meanwhile, try AI Art and the Editor filters — those run fully on-device.',
     );
   }
 

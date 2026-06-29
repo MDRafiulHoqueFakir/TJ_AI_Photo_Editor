@@ -108,8 +108,19 @@ class EditorController extends Notifier<EditorState> {
 
   ImageEngine get _engine => ref.read(imageEngineProvider);
 
+  /// Long-edge cap for the working image. Bounds memory + per-pixel CPU work so
+  /// edits stay responsive and can't crash the tab on very large photos.
+  static const _maxWorkingEdge = 2048;
+
   Future<void> loadImage(Uint8List bytes) async {
-    state = EditorState(original: bytes);
+    // Downscale huge photos up front (the #1 cause of editor crashes/OOM).
+    Uint8List working;
+    try {
+      working = await _engine.fitWithin(bytes, maxLongEdge: _maxWorkingEdge);
+    } catch (_) {
+      working = bytes;
+    }
+    state = EditorState(original: working);
     await _render();
   }
 
@@ -252,6 +263,16 @@ class EditorController extends Notifier<EditorState> {
     final original = state.original;
     if (original == null) return;
 
+    try {
+      await _renderInternal(original);
+    } catch (e) {
+      // Never let a single bad op take down the app; just stop the spinner.
+      debugPrint('Editor render failed: $e');
+      state = state.copyWith(isProcessing: false);
+    }
+  }
+
+  Future<void> _renderInternal(Uint8List original) async {
     var buffer = original;
     for (final node in state.stack) {
       buffer = switch (node) {

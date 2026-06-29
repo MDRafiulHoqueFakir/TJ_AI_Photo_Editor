@@ -25,6 +25,7 @@ Working end-to-end:
 - **Frames & borders** — White, Black, Soft, Film, Polaroid; live preview, baked into export
 - **Tap-to-heal** spot retouch — tap blemishes to remove them (each tap is undoable)
 - **Collage maker** — 5 layouts, per-cell photo picking, spacing & background, export
+- **AI Art** — on-device artistic styles (Sketch, Pop Art, Oil, Pixel, Poster, Vintage)
 - Crop / rotate / flip, skin retouch, body reshape (CPU engine; FFI/GPU swap-ready)
 - **Export & download** the result (web download / native file save)
 - **Passport / ID maker** — crop to exact standard dimensions + printable 6×4" sheet
@@ -50,6 +51,16 @@ If a terminal is preferred, `flutter` is now on your PATH, so simply:
 flutter run -d chrome
 ```
 (`serve_web.bat` builds an optimized release and serves it at http://localhost:8080.)
+
+## Native Windows app (optional — true double-click .exe)
+A web app **cannot** be opened by double-clicking `index.html` (browsers block a
+local file from loading the engine). For a real no-browser app, build the Windows
+desktop target — it just needs **Developer Mode** on (Settings → System → For
+developers → *Developer Mode* → On), then:
+```bash
+flutter build windows
+```
+The runnable app lands in `build\windows\x64\runner\Release\`.
 
 ## Prerequisites
 - **Flutter SDK 3.22+** (installed at `%USERPROFILE%\flutter`; on PATH)
