@@ -20,13 +20,12 @@
 
   <style>
     html, body { margin: 0; padding: 0; height: 100%; background: #0E0E12; }
-    /* Branded loading splash shown until the Flutter view mounts, so the page
-       never looks blank/dead during engine load or the first compile. */
     #tj-splash {
       position: fixed; inset: 0; display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 22px;
       background: #0E0E12; z-index: 9999;
       transition: opacity .35s ease; font-family: system-ui, sans-serif;
+      padding: 24px; box-sizing: border-box; text-align: center;
     }
     #tj-splash .badge {
       width: 84px; height: 84px; border-radius: 22px;
@@ -43,6 +42,14 @@
     }
     @keyframes tj-spin { to { transform: rotate(360deg); } }
     #tj-splash.hide { opacity: 0; pointer-events: none; }
+    .tj-note {
+      display: none; max-width: 440px; color: #C9C9D4; line-height: 1.55; font-size: 14px;
+    }
+    .tj-note strong { color: #FFC857; }
+    .tj-note code {
+      background: #26262F; color: #00D9C0; padding: 2px 8px; border-radius: 6px;
+      font-size: 13px; white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -54,24 +61,57 @@
       </svg>
     </div>
     <div class="title">TJ Photo Editor</div>
-    <div class="ring"></div>
+    <div class="ring" id="tj-ring"></div>
+
+    <!-- Shown when opened as a file:// (won't run) or if loading stalls. -->
+    <div class="tj-note" id="tj-note-file">
+      <strong>Don't open this file directly.</strong><br><br>
+      A web app can't run from a file — it needs a local server.<br>
+      Close this tab, open the project folder, and<br>
+      <strong>double-click <code>run_web.bat</code></strong>.<br><br>
+      It opens the app automatically at <code>http://localhost:8080</code>.
+    </div>
+    <div class="tj-note" id="tj-note-slow">
+      Still loading… If this doesn't finish, close the tab and run
+      <code>run_web.bat</code> again, or hard-refresh with <strong>Ctrl+F5</strong>.
+    </div>
   </div>
 
   <script>
-    // Remove the splash once Flutter has rendered its first frame.
     (function () {
       var splash = document.getElementById('tj-splash');
+      var ring = document.getElementById('tj-ring');
+
+      // file:// can never load the engine — explain instead of spinning forever.
+      if (location.protocol === 'file:') {
+        ring.style.display = 'none';
+        document.getElementById('tj-note-file').style.display = 'block';
+        return; // do not even try to load Flutter
+      }
+
+      // Served over http(s): remove splash once Flutter's first frame mounts.
+      var done = false;
       var observer = new MutationObserver(function () {
         if (document.querySelector('flt-glass-pane, flutter-view')) {
+          done = true;
           splash.classList.add('hide');
           setTimeout(function () { splash.remove(); }, 400);
           observer.disconnect();
         }
       });
       observer.observe(document.body, { childList: true, subtree: true });
+
+      // If it hasn't mounted after 25s, surface a hint rather than spin silently.
+      setTimeout(function () {
+        if (!done) document.getElementById('tj-note-slow').style.display = 'block';
+      }, 25000);
+
+      // Load the Flutter bootstrap only when properly served.
+      var s = document.createElement('script');
+      s.src = 'flutter_bootstrap.js';
+      s.async = true;
+      document.body.appendChild(s);
     })();
   </script>
-
-  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
