@@ -47,6 +47,19 @@ void main() {
       expect(const OrientNode(degrees: -90).toJson()['type'], 'orient');
       expect(const SmoothNode(amount: 0.4).toJson()['amount'], 0.4);
       expect(const BodyReshapeNode(slim: -0.3).toJson()['slim'], -0.3);
+      expect(const HealNode(dx: 0.4, dy: 0.6).toJson()['type'], 'heal');
+    });
+
+    test('toggleHeal flips heal mode; addHeal pushes a HealNode', () async {
+      final n = container.read(editorControllerProvider.notifier);
+      n.toggleHeal();
+      n.setHealRadius(0.05);
+      expect(container.read(editorControllerProvider).healMode, isTrue);
+      await n.addHeal(0.4, 0.6);
+      final node = container.read(editorControllerProvider).stack.single;
+      expect(node, isA<HealNode>());
+      expect((node as HealNode).dx, 0.4);
+      expect(node.radius, 0.05);
     });
 
     test('updateLiveBody keeps a single top BodyReshapeNode', () async {

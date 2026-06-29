@@ -192,6 +192,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       ref.read(editorControllerProvider.notifier).dragOverlay,
                   onSelectOverlay:
                       ref.read(editorControllerProvider.notifier).selectOverlay,
+                  onHealTap:
+                      ref.read(editorControllerProvider.notifier).addHeal,
                 ),
               ),
             ),
@@ -216,12 +218,14 @@ class _CanvasView extends StatelessWidget {
     required this.onPick,
     required this.onDragOverlay,
     required this.onSelectOverlay,
+    required this.onHealTap,
   });
   final EditorState state;
   final bool comparing;
   final VoidCallback onPick;
   final void Function(String id, double ddx, double ddy) onDragOverlay;
   final void Function(String? id) onSelectOverlay;
+  final void Function(double dx, double dy) onHealTap;
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +279,18 @@ class _CanvasView extends StatelessWidget {
         );
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => onSelectOverlay(null), // tap empty space deselects
+          onTapUp: (details) {
+            if (state.healMode && !comparing) {
+              final p = details.localPosition;
+              final hx = (p.dx - inner.left) / inner.width;
+              final hy = (p.dy - inner.top) / inner.height;
+              if (hx >= 0 && hx <= 1 && hy >= 0 && hy <= 1) {
+                onHealTap(hx, hy);
+              }
+            } else {
+              onSelectOverlay(null); // tap empty space deselects
+            }
+          },
           child: Stack(
             children: [
               if (hasFrame)

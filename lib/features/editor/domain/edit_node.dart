@@ -67,6 +67,17 @@ class SmoothNode extends EditNode {
   Map<String, dynamic> toJson() => {'type': 'smooth', 'amount': amount};
 }
 
+class HealNode extends EditNode {
+  const HealNode({required this.dx, required this.dy, this.radius = 0.035});
+  final double dx; // 0..1
+  final double dy; // 0..1
+  final double radius; // fraction of shorter side
+
+  @override
+  Map<String, dynamic> toJson() =>
+      {'type': 'heal', 'dx': dx, 'dy': dy, 'radius': radius};
+}
+
 class BodyReshapeNode extends EditNode {
   const BodyReshapeNode({this.slim = 0, this.stretch = 0});
   final double slim; // -1..1

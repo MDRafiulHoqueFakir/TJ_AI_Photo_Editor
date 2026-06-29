@@ -5,8 +5,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/edit_node.dart';
 
-/// Skin smoothing (retouch). Drag commits a SmoothNode on release so it stays
-/// undoable and replayable in a Recipe.
+/// Retouch: skin smoothing + tap-to-heal blemish removal. Smoothing commits a
+/// SmoothNode; heal mode lets the user tap blemishes on the photo (each tap is
+/// an undoable HealNode). Both stay non-destructive and replay on export.
 class RetouchPanel extends ConsumerStatefulWidget {
   const RetouchPanel({super.key});
 
@@ -19,26 +20,55 @@ class _RetouchPanelState extends ConsumerState<RetouchPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final healMode = ref.watch(editorControllerProvider.select((s) => s.healMode));
+    final healRadius = ref.watch(editorControllerProvider.select((s) => s.healRadius));
+    final controller = ref.read(editorControllerProvider.notifier);
+
     return Container(
       color: AppColors.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Smooth skin', style: TextStyle(fontSize: 12)),
+          Row(
+            children: [
+              const SizedBox(
+                width: 84,
+                child: Text('Smooth', style: TextStyle(fontSize: 12)),
+              ),
+              Expanded(
+                child: Slider(
+                  value: _amount,
+                  onChanged: (v) => setState(() => _amount = v),
+                  onChangeEnd: (v) =>
+                      controller.pushNode(SmoothNode(amount: v)),
+                ),
+              ),
+            ],
           ),
-          Slider(
-            value: _amount,
-            onChanged: (v) => setState(() => _amount = v),
-            onChangeEnd: (v) => ref
-                .read(editorControllerProvider.notifier)
-                .pushNode(SmoothNode(amount: v)),
-          ),
-          const Text(
-            'Auto skin-mask retouch lands with on-device ML (Phase 2 native).',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+          Row(
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: controller.toggleHeal,
+                style: FilledButton.styleFrom(
+                  backgroundColor:
+                      healMode ? AppColors.primary : AppColors.surfaceHigh,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.healing, size: 18),
+                label: Text(healMode ? 'Healing — tap blemishes' : 'Heal'),
+              ),
+              const SizedBox(width: 12),
+              const Text('Size', style: TextStyle(fontSize: 12)),
+              Expanded(
+                child: Slider(
+                  value: healRadius,
+                  min: 0.015,
+                  max: 0.08,
+                  onChanged: controller.setHealRadius,
+                ),
+              ),
+            ],
           ),
         ],
       ),

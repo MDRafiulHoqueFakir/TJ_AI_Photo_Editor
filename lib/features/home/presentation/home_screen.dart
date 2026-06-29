@@ -67,6 +67,12 @@ class HomeScreen extends ConsumerWidget {
                 onTap: () => context.push(Routes.passport),
               ),
               _Tile(
+                icon: Icons.grid_view,
+                label: 'Collage',
+                subtitle: 'Combine photos',
+                onTap: () => context.push(Routes.collage),
+              ),
+              _Tile(
                 icon: Icons.photo_library,
                 label: 'Edit Photo',
                 subtitle: 'Open from gallery',

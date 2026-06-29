@@ -47,6 +47,16 @@ abstract interface class ImageEngine {
     required int bgArgb,
   });
 
+  /// Spot-heal: remove a small blemish at ([dx],[dy]) (image-relative 0..1) by
+  /// replacing a feathered disc with the average skin tone sampled from a ring
+  /// around it. [radius] is a fraction of the shorter side.
+  Future<Uint8List> heal(
+    Uint8List source, {
+    required double dx,
+    required double dy,
+    required double radius,
+  });
+
   /// Wrap [source] in a solid border. [bottomExtraPx] adds extra bottom margin
   /// (polaroid look). Output dimensions grow by the border on all sides.
   Future<Uint8List> frame(

@@ -23,6 +23,8 @@ Working end-to-end:
   baked into the export at full resolution
 - **Emoji stickers** — drop, drag, and resize emoji stickers (no bundled assets)
 - **Frames & borders** — White, Black, Soft, Film, Polaroid; live preview, baked into export
+- **Tap-to-heal** spot retouch — tap blemishes to remove them (each tap is undoable)
+- **Collage maker** — 5 layouts, per-cell photo picking, spacing & background, export
 - Crop / rotate / flip, skin retouch, body reshape (CPU engine; FFI/GPU swap-ready)
 - **Export & download** the result (web download / native file save)
 - **Passport / ID maker** — crop to exact standard dimensions + printable 6×4" sheet
@@ -38,10 +40,20 @@ face/body detection, segmentation, object removal, super-res; cloud generative
 Verified on Flutter 3.44.4: `flutter analyze` clean, tests pass, `flutter build web`
 succeeds, app runs in-browser with no console errors.
 
+## ▶️ Open the app (Windows — easiest)
+**Double-click `run_web.bat`** in this folder. The first launch compiles for about
+a minute, then Chrome opens automatically with the app. Keep the console window
+open while you use it; close it to stop.
+
+If a terminal is preferred, `flutter` is now on your PATH, so simply:
+```bash
+flutter run -d chrome
+```
+(`serve_web.bat` builds an optimized release and serves it at http://localhost:8080.)
+
 ## Prerequisites
-- **Flutter SDK 3.22+** (not currently installed on this machine — install from
-  https://docs.flutter.dev/get-started/install/windows)
-- Android Studio (Android) and/or Xcode on macOS (iOS)
+- **Flutter SDK 3.22+** (installed at `%USERPROFILE%\flutter`; on PATH)
+- Android Studio (Android) and/or Xcode on macOS (iOS) for mobile builds
 
 ## First-time setup
 

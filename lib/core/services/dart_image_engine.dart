@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
@@ -165,6 +166,65 @@ class DartImageEngine implements ImageEngine {
     }
     return Uint8List.fromList(img.encodeJpg(image, quality: 92));
   }
+
+  @override
+  Future<Uint8List> heal(
+    Uint8List source, {
+    required double dx,
+    required double dy,
+    required double radius,
+  }) async {
+    final image = img.decodeImage(source);
+    if (image == null) return source;
+
+    final minSide = image.width < image.height ? image.width : image.height;
+    final r = (radius * minSide).clamp(2.0, minSide.toDouble());
+    final cx = dx * image.width;
+    final cy = dy * image.height;
+
+    // Average colour of the ring [r .. 1.8r] = clean skin around the blemish.
+    var sr = 0.0, sg = 0.0, sb = 0.0, n = 0;
+    final outer = r * 1.8;
+    final x0 = (cx - outer).floor().clamp(0, image.width - 1);
+    final x1 = (cx + outer).ceil().clamp(0, image.width - 1);
+    final y0 = (cy - outer).floor().clamp(0, image.height - 1);
+    final y1 = (cy + outer).ceil().clamp(0, image.height - 1);
+    for (var y = y0; y <= y1; y++) {
+      for (var x = x0; x <= x1; x++) {
+        final d = _dist(x - cx, y - cy);
+        if (d >= r && d <= outer) {
+          final p = image.getPixel(x, y);
+          sr += p.r;
+          sg += p.g;
+          sb += p.b;
+          n++;
+        }
+      }
+    }
+    if (n == 0) return source;
+    final ar = sr / n, ag = sg / n, ab = sb / n;
+
+    // Feathered fill: full inside r, fading to 0 by 1.4r.
+    final feather = r * 1.4;
+    for (var y = y0; y <= y1; y++) {
+      for (var x = x0; x <= x1; x++) {
+        final d = _dist(x - cx, y - cy);
+        if (d > feather) continue;
+        final t = d <= r ? 1.0 : (feather - d) / (feather - r);
+        final p = image.getPixel(x, y);
+        image.setPixelRgb(
+          x,
+          y,
+          p.r * (1 - t) + ar * t,
+          p.g * (1 - t) + ag * t,
+          p.b * (1 - t) + ab * t,
+        );
+      }
+    }
+    return Uint8List.fromList(img.encodeJpg(image, quality: 95));
+  }
+
+  double _dist(num a, num b) => math.sqrt(a * a + b * b);
 
   @override
   Future<Uint8List> frame(

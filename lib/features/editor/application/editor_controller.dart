@@ -33,6 +33,8 @@ class EditorState {
     this.frameId = '',
     this.overlays = const [],
     this.selectedOverlayId,
+    this.healMode = false,
+    this.healRadius = 0.035,
     this.stack = const [],
     this.redoStack = const [],
     this.isProcessing = false,
@@ -45,6 +47,8 @@ class EditorState {
   final String frameId; // selected frame ('' = none)
   final List<TextOverlay> overlays; // draggable text layers
   final String? selectedOverlayId;
+  final bool healMode; // when on, tapping the photo heals a blemish
+  final double healRadius;
   final List<EditNode> stack;
   final List<List<EditNode>> redoStack;
   final bool isProcessing;
@@ -67,6 +71,8 @@ class EditorState {
     String? frameId,
     List<TextOverlay>? overlays,
     Object? selectedOverlayId = _noChange,
+    bool? healMode,
+    double? healRadius,
     List<EditNode>? stack,
     List<List<EditNode>>? redoStack,
     bool? isProcessing,
@@ -81,6 +87,8 @@ class EditorState {
       selectedOverlayId: selectedOverlayId == _noChange
           ? this.selectedOverlayId
           : selectedOverlayId as String?,
+      healMode: healMode ?? this.healMode,
+      healRadius: healRadius ?? this.healRadius,
       stack: stack ?? this.stack,
       redoStack: redoStack ?? this.redoStack,
       isProcessing: isProcessing ?? this.isProcessing,
@@ -162,6 +170,16 @@ class EditorController extends Notifier<EditorState> {
 
   /// Select a frame/border ('' clears it).
   void selectFrame(String id) => state = state.copyWith(frameId: id);
+
+  // ---- Spot heal ----
+
+  void toggleHeal() => state = state.copyWith(healMode: !state.healMode);
+  void setHealRadius(double r) => state = state.copyWith(healRadius: r);
+
+  /// Heal a blemish at image-relative ([dx],[dy]); pushed to the stack so it is
+  /// undoable and replayed on export.
+  Future<void> addHeal(double dx, double dy) =>
+      pushNode(HealNode(dx: dx, dy: dy, radius: state.healRadius));
 
   // ---- Text overlays ----
 
@@ -252,6 +270,8 @@ class EditorController extends Notifier<EditorState> {
           await _engine.smoothSkin(buffer, amount: amount),
         BodyReshapeNode(:final slim, :final stretch) =>
           await _engine.reshapeBody(buffer, slim: slim, stretch: stretch),
+        HealNode(:final dx, :final dy, :final radius) =>
+          await _engine.heal(buffer, dx: dx, dy: dy, radius: radius),
         CropNode() => buffer, // freeform crop rect handled by native engine
       };
     }

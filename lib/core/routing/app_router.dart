@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/ai_studio/presentation/ai_studio_screen.dart';
+import '../../features/collage/presentation/collage_screen.dart';
 import '../../features/editor/presentation/editor_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
@@ -16,6 +17,7 @@ abstract class Routes {
   static const aiStudio = '/ai-studio';
   static const quickTools = '/tools';
   static const passport = '/passport';
+  static const collage = '/collage';
   static const paywall = '/paywall';
 }
 
@@ -46,6 +48,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.passport,
         builder: (_, __) => const PassportScreen(),
+      ),
+      GoRoute(
+        path: Routes.collage,
+        builder: (_, __) => const CollageScreen(),
       ),
       GoRoute(
         path: Routes.paywall,
