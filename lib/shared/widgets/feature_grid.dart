@@ -70,6 +70,8 @@ class FeatureGrid extends StatelessWidget {
   }
 
   Widget _badge(FeatureItem item) {
+    // When everything is unlocked, don't show PRO / credit-cost badges.
+    if (AppConstants.unlockAllFeatures) return const SizedBox.shrink();
     switch (item.tier) {
       case ToolTier.free:
         return const SizedBox.shrink();

@@ -2,6 +2,12 @@
 abstract class AppConstants {
   static const String appName = 'TJ Photo Editor';
 
+  /// When true, ALL subscription restrictions are bypassed: every user is Pro,
+  /// exports have no watermark, no paywall, and credit-gated tools are free.
+  /// Set back to `false` (or remove) to re-enable monetization later — the
+  /// subscription/credit system underneath is untouched.
+  static const bool unlockAllFeatures = true;
+
   // Free-tier limits
   static const int freeMaxExportPx = 1920; // long edge
   static const bool freeExportsWatermarked = true;

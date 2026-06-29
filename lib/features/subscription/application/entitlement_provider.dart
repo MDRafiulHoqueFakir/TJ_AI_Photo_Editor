@@ -24,7 +24,14 @@ class EntitlementState {
 
 class EntitlementNotifier extends Notifier<EntitlementState> {
   @override
-  EntitlementState build() => const EntitlementState();
+  EntitlementState build() {
+    // Dev/preview mode: everyone is Pro with ample credits so all features are
+    // usable. Flip AppConstants.unlockAllFeatures to false to restore gating.
+    if (AppConstants.unlockAllFeatures) {
+      return const EntitlementState(entitlement: Entitlement.pro, credits: 9999);
+    }
+    return const EntitlementState();
+  }
 
   /// Called after a successful RevenueCat purchase (Phase 3).
   void setPro({int grantCredits = 50}) {
@@ -33,6 +40,7 @@ class EntitlementNotifier extends Notifier<EntitlementState> {
 
   /// Returns true if a cloud action can run; does NOT debit (debit on success).
   bool canAfford(String actionKey) {
+    if (AppConstants.unlockAllFeatures) return true;
     final cost = AppConstants.creditCosts[actionKey] ?? 0;
     return state.isPro && state.credits >= cost;
   }
