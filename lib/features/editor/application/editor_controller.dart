@@ -164,6 +164,20 @@ class EditorController extends Notifier<EditorState> {
     );
   }
 
+  void addSticker(String emoji) {
+    final overlay = TextOverlay(
+      id: _uuid.v4(),
+      text: emoji,
+      size: 0.16,
+      bold: false,
+      sticker: true,
+    );
+    state = state.copyWith(
+      overlays: [...state.overlays, overlay],
+      selectedOverlayId: overlay.id,
+    );
+  }
+
   void selectOverlay(String? id) =>
       state = state.copyWith(selectedOverlayId: id);
 

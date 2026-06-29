@@ -13,6 +13,7 @@ class TextOverlay {
     this.size = 0.08,
     this.color = 0xFFFFFFFF,
     this.bold = true,
+    this.sticker = false,
   });
 
   final String id;
@@ -22,6 +23,7 @@ class TextOverlay {
   final double size;
   final int color;
   final bool bold;
+  final bool sticker; // emoji/sticker layer: no shadow, color ignored by glyph
 
   TextOverlay copyWith({
     String? text,
@@ -39,17 +41,20 @@ class TextOverlay {
       size: size ?? this.size,
       color: color ?? this.color,
       bold: bold ?? this.bold,
+      sticker: sticker,
     );
   }
 
   TextStyle styleFor(double imageHeight) => TextStyle(
-        color: Color(color),
+        color: sticker ? null : Color(color),
         fontSize: size * imageHeight,
         fontWeight: bold ? FontWeight.bold : FontWeight.w500,
         height: 1.0,
-        shadows: const [
-          Shadow(blurRadius: 4, color: Color(0x99000000), offset: Offset(0, 1)),
-        ],
+        shadows: sticker
+            ? null
+            : const [
+                Shadow(blurRadius: 4, color: Color(0x99000000), offset: Offset(0, 1)),
+              ],
       );
 }
 

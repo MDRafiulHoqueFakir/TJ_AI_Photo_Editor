@@ -22,8 +22,8 @@ class TextPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(editorControllerProvider);
     final controller = ref.read(editorControllerProvider.notifier);
-    final selected =
-        state.overlays.firstWhereOrNull((o) => o.id == state.selectedOverlayId);
+    final selected = state.overlays
+        .firstWhereOrNull((o) => o.id == state.selectedOverlayId && !o.sticker);
 
     if (selected == null) {
       return Container(

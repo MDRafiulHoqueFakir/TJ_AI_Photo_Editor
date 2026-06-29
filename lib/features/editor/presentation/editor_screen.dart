@@ -16,6 +16,7 @@ import 'widgets/body_panel.dart';
 import 'widgets/crop_panel.dart';
 import 'widgets/filter_panel.dart';
 import 'widgets/retouch_panel.dart';
+import 'widgets/sticker_panel.dart';
 import 'widgets/text_layer.dart';
 import 'widgets/text_panel.dart';
 import 'widgets/tool_rail.dart';
@@ -137,6 +138,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       EditorTool.crop => const CropPanel(),
       EditorTool.filter => const FilterPanel(),
       EditorTool.text => const TextPanel(),
+      EditorTool.sticker => const StickerPanel(),
       _ => _ComingSoonPanel(tool: tool),
     };
   }

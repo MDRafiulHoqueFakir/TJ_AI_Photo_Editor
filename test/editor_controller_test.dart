@@ -83,6 +83,14 @@ void main() {
       expect(o.dy, 1.0);
     });
 
+    test('addSticker marks the overlay as a sticker', () {
+      final n = container.read(editorControllerProvider.notifier);
+      n.addSticker('🔥');
+      final o = container.read(editorControllerProvider).overlays.single;
+      expect(o.sticker, isTrue);
+      expect(o.text, '🔥');
+    });
+
     test('removeOverlay deletes it and clears selection', () {
       final n = container.read(editorControllerProvider.notifier);
       n.addText('x');
