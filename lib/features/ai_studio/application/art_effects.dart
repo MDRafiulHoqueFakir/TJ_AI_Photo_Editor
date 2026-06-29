@@ -4,10 +4,12 @@ import 'package:image/image.dart' as img;
 
 /// One artistic look. Applied fully on-device (package:image) — no model or
 /// cloud needed — so the AI Art tool actually works offline.
-enum ArtStyle { sketch, popArt, poster, oil, pixel, vintage }
+enum ArtStyle { enhance, cartoon, sketch, popArt, poster, oil, pixel, vintage }
 
 extension ArtStyleLabel on ArtStyle {
   String get label => switch (this) {
+        ArtStyle.enhance => 'Enhance',
+        ArtStyle.cartoon => 'Cartoon',
         ArtStyle.sketch => 'Sketch',
         ArtStyle.popArt => 'Pop Art',
         ArtStyle.poster => 'Poster',
@@ -37,6 +39,8 @@ abstract class ArtEffects {
     }
 
     final out = switch (style) {
+      ArtStyle.enhance => _enhance(image),
+      ArtStyle.cartoon => _cartoon(image),
       ArtStyle.sketch => _sketch(image),
       ArtStyle.popArt => _popArt(image),
       ArtStyle.poster => img.quantize(image.clone(), numberOfColors: 8),
@@ -45,6 +49,25 @@ abstract class ArtEffects {
       ArtStyle.vintage => _vintage(image),
     };
     return Uint8List.fromList(img.encodePng(out));
+  }
+
+  /// One-tap auto improve: normalize levels, lift contrast/saturation, sharpen.
+  static img.Image _enhance(img.Image src) {
+    var out = img.normalize(src.clone(), min: 0, max: 255);
+    out = img.adjustColor(out, contrast: 1.08, saturation: 1.12, brightness: 1.02);
+    return img.convolution(
+      out,
+      filter: [0, -1, 0, -1, 5, -1, 0, -1, 0],
+      div: 1,
+    );
+  }
+
+  /// Cartoon: flat quantized colours with dark ink edges (multiply blend).
+  static img.Image _cartoon(img.Image src) {
+    final flat = img.quantize(src.clone(), numberOfColors: 14);
+    final edges = img.invert(img.sobel(img.grayscale(src.clone()), amount: 1));
+    img.compositeImage(flat, edges, blend: img.BlendMode.multiply);
+    return flat;
   }
 
   static img.Image _sketch(img.Image src) {

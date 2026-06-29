@@ -10,7 +10,9 @@ import '../application/art_effects.dart';
 /// AI Art — turn a photo into an artistic style. Runs fully on-device, so it
 /// works offline and needs no cloud/credits.
 class AiArtScreen extends StatefulWidget {
-  const AiArtScreen({super.key});
+  const AiArtScreen({super.key, this.initialStyle = ArtStyle.enhance});
+
+  final ArtStyle initialStyle;
 
   @override
   State<AiArtScreen> createState() => _AiArtScreenState();
@@ -19,7 +21,7 @@ class AiArtScreen extends StatefulWidget {
 class _AiArtScreenState extends State<AiArtScreen> {
   Uint8List? _source;
   Uint8List? _result;
-  ArtStyle _style = ArtStyle.sketch;
+  late ArtStyle _style = widget.initialStyle;
   bool _busy = false;
 
   Future<void> _pick() async {

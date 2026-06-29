@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/ai_studio/application/art_effects.dart';
 import '../../features/ai_studio/presentation/ai_art_screen.dart';
 import '../../features/ai_studio/presentation/ai_studio_screen.dart';
 import '../../features/collage/presentation/collage_screen.dart';
@@ -57,7 +58,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: Routes.aiArt,
-        builder: (_, __) => const AiArtScreen(),
+        builder: (_, state) => AiArtScreen(
+          initialStyle: state.extra is ArtStyle
+              ? state.extra! as ArtStyle
+              : ArtStyle.enhance,
+        ),
       ),
       GoRoute(
         path: Routes.paywall,

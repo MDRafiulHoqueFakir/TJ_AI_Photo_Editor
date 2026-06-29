@@ -1,88 +1,128 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/routing/app_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/coming_soon_sheet.dart';
-import '../../../shared/widgets/feature_grid.dart';
+import '../../tryon/presentation/tryon_screen.dart';
+import '../application/art_effects.dart';
 
-class AiStudioScreen extends ConsumerWidget {
+/// AI Studio. Tools that genuinely run on-device are grouped as "Ready to use";
+/// truly generative tools (which need a GPU backend) are grouped separately and
+/// honest about it — no fake "coming soon" mixed in with working features.
+class AiStudioScreen extends StatelessWidget {
   const AiStudioScreen({super.key});
 
-  static const _features = [
-    FeatureItem(
-      icon: Icons.content_cut,
-      label: 'Hair Restyle',
-      tier: ToolTier.cloud,
-      creditKey: 'hair_restyle',
-    ),
-    FeatureItem(
-      icon: Icons.auto_fix_high,
-      label: 'Generative Fill',
-      tier: ToolTier.cloud,
-      creditKey: 'generative_fill',
-    ),
-    FeatureItem(
-      icon: Icons.brush,
-      label: 'AI Art',
-      tier: ToolTier.free, // works on-device now
-    ),
-    FeatureItem(
-      icon: Icons.wallpaper,
-      label: 'BG Generate',
-      tier: ToolTier.cloud,
-      creditKey: 'background_generate',
-    ),
-    FeatureItem(
-      icon: Icons.style,
-      label: 'Style Presets',
-      tier: ToolTier.free,
-    ),
-  ];
-
-  void _onTap(BuildContext context, WidgetRef ref, FeatureItem item) {
-    // Working on-device tools route to real screens.
-    if (item.label == 'AI Art') {
-      context.push(Routes.aiArt);
-      return;
-    }
-    if (item.label == 'Style Presets') {
-      showComingSoon(
-        context,
-        title: item.label,
-        reason:
-            'Style presets are live in the Editor — open a photo and tap the Filter tab for Vivid, Mono, Noir, Sepia, Vintage and more.',
-      );
-      return;
-    }
-    // Remaining tools are genuinely generative (need the cloud AI backend).
-    showComingSoon(
-      context,
-      title: item.label,
-      reason:
-          'This is a generative tool (e.g. new hair, fill, background) that runs on cloud GPUs. It turns on once the AI image-generation backend is connected. Meanwhile, try AI Art and the Editor filters — those run fully on-device.',
-    );
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('AI Studio')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'Generative tools run in the cloud and use credits. Cost is shown on each tile.',
-            style: TextStyle(color: Color(0xFF9A9AA8)),
-          ),
-          const SizedBox(height: 16),
-          FeatureGrid(
-            items: _features,
-            onTap: (item) => _onTap(context, ref, item),
-          ),
+          _header('Ready to use', 'Runs on your device — works offline, no limits.'),
+          const SizedBox(height: 12),
+          _grid([
+            _Tool(Icons.auto_fix_high, 'Auto Enhance', AppColors.accent,
+                () => _art(context, ArtStyle.enhance),),
+            _Tool(Icons.brush, 'AI Art', AppColors.primary,
+                () => _art(context, ArtStyle.sketch),),
+            _Tool(Icons.animation, 'Cartoon', AppColors.primary,
+                () => _art(context, ArtStyle.cartoon),),
+            _Tool(Icons.filter_vintage, 'More styles', AppColors.primary,
+                () => _art(context, ArtStyle.popArt),),
+          ]),
+          const SizedBox(height: 24),
+          _header('Cloud AI', 'Generative tools that need an AI backend connected.'),
+          const SizedBox(height: 12),
+          _grid([
+            _Tool(Icons.checkroom, 'Professional Attire', AppColors.proGold,
+                () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const TryOnScreen()),
+                    ),),
+            _Tool(Icons.content_cut, 'Hair Restyle', AppColors.textSecondary,
+                () => _cloud(context, 'Hair Restyle',
+                    'new AI-generated hairstyles',),),
+            _Tool(Icons.auto_awesome, 'Generative Fill', AppColors.textSecondary,
+                () => _cloud(context, 'Generative Fill',
+                    'replacing/extending parts of a photo',),),
+            _Tool(Icons.wallpaper, 'BG Generate', AppColors.textSecondary,
+                () => _cloud(context, 'Background Generate',
+                    'AI-generated backgrounds',),),
+          ]),
         ],
       ),
     );
   }
+
+  void _art(BuildContext context, ArtStyle style) {
+    context.push(Routes.aiArt, extra: style);
+  }
+
+  void _cloud(BuildContext context, String title, String what) {
+    showComingSoon(
+      context,
+      title: title,
+      reason:
+          'This generates $what — a job for cloud GPUs. It turns on once the AI '
+          'image-generation backend is connected. Meanwhile, the "Ready to use" '
+          'tools above and the Editor filters all work right now, on-device.',
+    );
+  }
+
+  Widget _header(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 2),
+        Text(subtitle,
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),),
+      ],
+    );
+  }
+
+  Widget _grid(List<_Tool> tools) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.4,
+      children: [for (final t in tools) _tile(t)],
+    );
+  }
+
+  Widget _tile(_Tool t) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: t.onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(t.icon, color: t.color, size: 30),
+            const SizedBox(height: 10),
+            Text(t.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Tool {
+  const _Tool(this.icon, this.label, this.color, this.onTap);
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 }
