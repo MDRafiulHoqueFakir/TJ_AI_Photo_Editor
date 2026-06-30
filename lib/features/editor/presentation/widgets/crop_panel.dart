@@ -36,12 +36,19 @@ class CropPanel extends ConsumerWidget {
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, i) => ActionChip(
                 label: Text(_aspects[i].label),
-                onPressed: () => controller.pushNode(
-                  CropNode(
-                    aspectLabel: _aspects[i].label,
-                    ratio: _aspects[i].ratio,
-                  ),
-                ),
+                onPressed: () {
+                  // "Free" opens the draggable crop box; presets crop directly.
+                  if (_aspects[i].ratio == null) {
+                    controller.beginFreeCrop();
+                  } else {
+                    controller.pushNode(
+                      CropNode(
+                        aspectLabel: _aspects[i].label,
+                        ratio: _aspects[i].ratio,
+                      ),
+                    );
+                  }
+                },
               ),
             ),
           ),

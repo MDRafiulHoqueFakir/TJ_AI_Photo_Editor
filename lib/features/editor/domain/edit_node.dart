@@ -42,13 +42,31 @@ class ResizeNode extends EditNode {
 }
 
 class CropNode extends EditNode {
-  const CropNode({required this.aspectLabel, this.ratio});
-  final String aspectLabel; // e.g. "1:1", "4:5"
-  final double? ratio; // width/height; null = Free (no crop)
+  const CropNode({
+    required this.aspectLabel,
+    this.ratio,
+    this.rectL,
+    this.rectT,
+    this.rectW,
+    this.rectH,
+  });
+  final String aspectLabel; // e.g. "1:1", "4:5", "Free"
+  final double? ratio; // width/height; for aspect presets
+  // Freeform crop rect in image fractions (0..1); set for a hand-drawn crop.
+  final double? rectL;
+  final double? rectT;
+  final double? rectW;
+  final double? rectH;
+
+  bool get hasRect => rectW != null && rectH != null;
 
   @override
-  Map<String, dynamic> toJson() =>
-      {'type': 'crop', 'aspect': aspectLabel, 'ratio': ratio};
+  Map<String, dynamic> toJson() => {
+        'type': 'crop',
+        'aspect': aspectLabel,
+        'ratio': ratio,
+        if (hasRect) 'rect': [rectL, rectT, rectW, rectH],
+      };
 }
 
 class OrientNode extends EditNode {

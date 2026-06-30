@@ -13,6 +13,7 @@ import '../../subscription/application/entitlement_provider.dart';
 import '../application/editor_controller.dart';
 import 'widgets/adjust_panel.dart';
 import 'widgets/body_panel.dart';
+import 'widgets/crop_overlay.dart';
 import 'widgets/crop_panel.dart';
 import 'widgets/filter_panel.dart';
 import 'widgets/frame_panel.dart';
@@ -194,11 +195,20 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       ref.read(editorControllerProvider.notifier).selectOverlay,
                   onHealTap:
                       ref.read(editorControllerProvider.notifier).addHeal,
+                  onCropChanged:
+                      ref.read(editorControllerProvider.notifier).setCropRect,
                 ),
               ),
             ),
           ),
-          if (state.hasImage) ...[
+          if (state.hasImage && state.freeCropMode)
+            _CropBar(
+              onCancel:
+                  ref.read(editorControllerProvider.notifier).cancelFreeCrop,
+              onApply:
+                  ref.read(editorControllerProvider.notifier).applyFreeCrop,
+            )
+          else if (state.hasImage) ...[
             _panelFor(_activeTool),
             ToolRail(
               active: _activeTool,
@@ -219,6 +229,7 @@ class _CanvasView extends StatelessWidget {
     required this.onDragOverlay,
     required this.onSelectOverlay,
     required this.onHealTap,
+    required this.onCropChanged,
   });
   final EditorState state;
   final bool comparing;
@@ -226,6 +237,7 @@ class _CanvasView extends StatelessWidget {
   final void Function(String id, double ddx, double ddy) onDragOverlay;
   final void Function(String? id) onSelectOverlay;
   final void Function(double dx, double dy) onHealTap;
+  final void Function(Rect rect) onCropChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -280,6 +292,9 @@ class _CanvasView extends StatelessWidget {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapUp: (details) {
+            if (state.freeCropMode) {
+              return; // the crop overlay owns gestures while cropping
+            }
             if (state.healMode && !comparing) {
               final p = details.localPosition;
               final hx = (p.dx - inner.left) / inner.width;
@@ -309,7 +324,7 @@ class _CanvasView extends StatelessWidget {
                         filterMatrix: state.filterMatrix,
                       ),
               ),
-              if (!comparing)
+              if (!comparing && !state.freeCropMode)
                 Positioned.fromRect(
                   rect: inner,
                   child: TextLayer(
@@ -319,6 +334,16 @@ class _CanvasView extends StatelessWidget {
                     selectedId: state.selectedOverlayId,
                     onDragDelta: onDragOverlay,
                     onSelect: onSelectOverlay,
+                  ),
+                ),
+              if (state.freeCropMode)
+                Positioned.fromRect(
+                  rect: inner,
+                  child: CropOverlay(
+                    width: inner.width,
+                    height: inner.height,
+                    rect: state.cropRect,
+                    onChanged: onCropChanged,
                   ),
                 ),
               if (state.isProcessing)
@@ -357,6 +382,38 @@ class _CanvasView extends StatelessWidget {
       w = h * aspect;
     }
     return Rect.fromLTWH((box.width - w) / 2, (box.height - h) / 2, w, h);
+  }
+}
+
+class _CropBar extends StatelessWidget {
+  const _CropBar({required this.onCancel, required this.onApply});
+  final VoidCallback onCancel;
+  final Future<void> Function() onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          const Text('Drag the box, then apply',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),),
+          const Spacer(),
+          TextButton.icon(
+            onPressed: onCancel,
+            icon: const Icon(Icons.close),
+            label: const Text('Cancel'),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.icon(
+            onPressed: onApply,
+            icon: const Icon(Icons.crop),
+            label: const Text('Apply crop'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

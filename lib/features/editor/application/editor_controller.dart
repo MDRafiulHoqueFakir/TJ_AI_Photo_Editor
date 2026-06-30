@@ -35,6 +35,8 @@ class EditorState {
     this.selectedOverlayId,
     this.healMode = false,
     this.healRadius = 0.035,
+    this.freeCropMode = false,
+    this.cropRect = const ui.Rect.fromLTRB(0.1, 0.1, 0.9, 0.9),
     this.stack = const [],
     this.redoStack = const [],
     this.isProcessing = false,
@@ -49,6 +51,8 @@ class EditorState {
   final String? selectedOverlayId;
   final bool healMode; // when on, tapping the photo heals a blemish
   final double healRadius;
+  final bool freeCropMode; // when on, a draggable crop box is shown
+  final ui.Rect cropRect; // freeform crop, fractions of the image (0..1)
   final List<EditNode> stack;
   final List<List<EditNode>> redoStack;
   final bool isProcessing;
@@ -73,6 +77,8 @@ class EditorState {
     Object? selectedOverlayId = _noChange,
     bool? healMode,
     double? healRadius,
+    bool? freeCropMode,
+    ui.Rect? cropRect,
     List<EditNode>? stack,
     List<List<EditNode>>? redoStack,
     bool? isProcessing,
@@ -89,6 +95,8 @@ class EditorState {
           : selectedOverlayId as String?,
       healMode: healMode ?? this.healMode,
       healRadius: healRadius ?? this.healRadius,
+      freeCropMode: freeCropMode ?? this.freeCropMode,
+      cropRect: cropRect ?? this.cropRect,
       stack: stack ?? this.stack,
       redoStack: redoStack ?? this.redoStack,
       isProcessing: isProcessing ?? this.isProcessing,
@@ -221,6 +229,29 @@ class EditorController extends Notifier<EditorState> {
   /// Select a frame/border ('' clears it).
   void selectFrame(String id) => state = state.copyWith(frameId: id);
 
+  // ---- Free (hand-drawn) crop ----
+
+  void beginFreeCrop() => state = state.copyWith(
+        freeCropMode: true,
+        cropRect: const ui.Rect.fromLTRB(0.1, 0.1, 0.9, 0.9),
+      );
+
+  void setCropRect(ui.Rect rect) => state = state.copyWith(cropRect: rect);
+
+  void cancelFreeCrop() => state = state.copyWith(freeCropMode: false);
+
+  Future<void> applyFreeCrop() async {
+    final r = state.cropRect;
+    state = state.copyWith(freeCropMode: false);
+    await pushNode(CropNode(
+      aspectLabel: 'Free',
+      rectL: r.left,
+      rectT: r.top,
+      rectW: r.width,
+      rectH: r.height,
+    ),);
+  }
+
   // ---- Spot heal ----
 
   void toggleHeal() => state = state.copyWith(healMode: !state.healMode);
@@ -346,9 +377,25 @@ class EditorController extends Notifier<EditorState> {
           await _engine.reshapeBody(buffer, slim: slim, stretch: stretch),
         HealNode(:final dx, :final dy, :final radius) =>
           await _engine.heal(buffer, dx: dx, dy: dy, radius: radius),
-        CropNode(:final ratio) => ratio == null
-            ? buffer
-            : await _engine.cropToAspect(buffer, ratio: ratio),
+        CropNode(
+          :final hasRect,
+          :final ratio,
+          :final rectL,
+          :final rectT,
+          :final rectW,
+          :final rectH,
+        ) =>
+          hasRect
+              ? await _engine.cropToRect(
+                  buffer,
+                  left: rectL!,
+                  top: rectT!,
+                  width: rectW!,
+                  height: rectH!,
+                )
+              : ratio != null
+                  ? await _engine.cropToAspect(buffer, ratio: ratio)
+                  : buffer,
       };
     }
 

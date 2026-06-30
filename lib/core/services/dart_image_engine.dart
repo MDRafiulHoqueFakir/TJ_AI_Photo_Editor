@@ -186,6 +186,24 @@ class DartImageEngine implements ImageEngine {
   }
 
   @override
+  Future<Uint8List> cropToRect(
+    Uint8List source, {
+    required double left,
+    required double top,
+    required double width,
+    required double height,
+  }) async {
+    final image = img.decodeImage(source);
+    if (image == null) return source;
+    final x = (left * image.width).round().clamp(0, image.width - 1);
+    final y = (top * image.height).round().clamp(0, image.height - 1);
+    final w = (width * image.width).round().clamp(1, image.width - x);
+    final h = (height * image.height).round().clamp(1, image.height - y);
+    final out = img.copyCrop(image, x: x, y: y, width: w, height: h);
+    return Uint8List.fromList(img.encodeJpg(out, quality: 92));
+  }
+
+  @override
   Future<Uint8List> denoise(Uint8List source, {double amount = 0.5}) async {
     final image = img.decodeImage(source);
     if (image == null) return source;

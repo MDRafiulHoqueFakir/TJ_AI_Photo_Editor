@@ -47,6 +47,15 @@ abstract interface class ImageEngine {
   /// Center-crop to the given aspect [ratio] (width / height).
   Future<Uint8List> cropToAspect(Uint8List source, {required double ratio});
 
+  /// Crop to an arbitrary rectangle given in fractions of the image (0..1).
+  Future<Uint8List> cropToRect(
+    Uint8List source, {
+    required double left,
+    required double top,
+    required double width,
+    required double height,
+  });
+
   /// Reduce noise (edge-preserving-ish smoothing). [amount] 0..1.
   Future<Uint8List> denoise(Uint8List source, {double amount = 0.5});
 

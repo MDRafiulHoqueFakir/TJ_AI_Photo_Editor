@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui' show Rect;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -109,6 +110,18 @@ void main() {
       final s = container.read(editorControllerProvider);
       expect(s.sourceImage, isNotNull);
       expect(s.sourceImage!.width, s.sourceImage!.height); // square now
+    });
+
+    test('free crop: begin, drag a box, apply crops to it', () async {
+      await c.loadImage(_testImage()); // 160x120
+      c.beginFreeCrop();
+      expect(container.read(editorControllerProvider).freeCropMode, isTrue);
+      c.setCropRect(const Rect.fromLTRB(0.25, 0.25, 0.75, 0.75));
+      await c.applyFreeCrop();
+      final s = container.read(editorControllerProvider);
+      expect(s.freeCropMode, isFalse);
+      expect(s.sourceImage!.width, lessThan(160)); // cropped narrower
+      expect(s.sourceImage!.width, greaterThan(0));
     });
   });
 
