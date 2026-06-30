@@ -5,12 +5,19 @@ import '../../../../core/theme/app_colors.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/edit_node.dart';
 
-/// Aspect-ratio crop presets + rotate/flip. Crop geometry is applied by the
-/// native engine; here we record intent (aspect) and run orient ops directly.
+/// Aspect-ratio crop presets + rotate/flip. Tapping a ratio center-crops the
+/// photo to that aspect; rotate/flip apply immediately.
 class CropPanel extends ConsumerWidget {
   const CropPanel({super.key});
 
-  static const _aspects = ['Free', '1:1', '4:5', '9:16', '16:9', '3:4'];
+  static const _aspects = <({String label, double? ratio})>[
+    (label: 'Free', ratio: null),
+    (label: '1:1', ratio: 1),
+    (label: '4:5', ratio: 4 / 5),
+    (label: '9:16', ratio: 9 / 16),
+    (label: '16:9', ratio: 16 / 9),
+    (label: '3:4', ratio: 3 / 4),
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,9 +35,13 @@ class CropPanel extends ConsumerWidget {
               itemCount: _aspects.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, i) => ActionChip(
-                label: Text(_aspects[i]),
-                onPressed: () =>
-                    controller.pushNode(CropNode(aspectLabel: _aspects[i])),
+                label: Text(_aspects[i].label),
+                onPressed: () => controller.pushNode(
+                  CropNode(
+                    aspectLabel: _aspects[i].label,
+                    ratio: _aspects[i].ratio,
+                  ),
+                ),
               ),
             ),
           ),

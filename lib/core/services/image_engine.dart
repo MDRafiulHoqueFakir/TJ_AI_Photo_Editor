@@ -40,9 +40,21 @@ abstract interface class ImageEngine {
   /// Dart path is a global blend approximation good enough for QA/preview.
   Future<Uint8List> smoothSkin(Uint8List source, {double amount = 0.3});
 
-  /// Body reshape: [slim] and [stretch] in -1..1 (0 = no change).
-  /// Interim non-uniform scale; replaced by mesh/liquify warp in the GPU engine.
+  /// Body reshape: [slim] and [stretch] in -1..1 (0 = no change). Squeezes/
+  /// expands then cover-crops back to the original frame (no black bars).
   Future<Uint8List> reshapeBody(Uint8List source, {double slim = 0, double stretch = 0});
+
+  /// Center-crop to the given aspect [ratio] (width / height).
+  Future<Uint8List> cropToAspect(Uint8List source, {required double ratio});
+
+  /// Reduce noise (edge-preserving-ish smoothing). [amount] 0..1.
+  Future<Uint8List> denoise(Uint8List source, {double amount = 0.5});
+
+  /// HDR-style local contrast + tone pop. [amount] 0..1.
+  Future<Uint8List> hdr(Uint8List source, {double amount = 0.6});
+
+  /// Upscale by [factor] (cubic). Not AI super-resolution, but a real resize.
+  Future<Uint8List> upscale(Uint8List source, {int factor = 2});
 
   /// Replace pixels outside [subjectMask] with [bgArgb] (passport/BG tools).
   /// If [subjectMask] is null (no ML available), fills the whole canvas tint.

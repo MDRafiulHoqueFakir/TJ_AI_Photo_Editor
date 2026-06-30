@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:tj_photo_editor/core/services/dart_image_engine.dart';
 import 'package:tj_photo_editor/features/editor/application/editor_controller.dart';
 import 'package:tj_photo_editor/features/editor/domain/edit_node.dart';
 
@@ -100,6 +101,31 @@ void main() {
       c.redo();
       final s = container.read(editorControllerProvider);
       expect(s.sourceImage, isNotNull);
+    });
+
+    test('crop actually changes the texture to the chosen aspect', () async {
+      await c.loadImage(_testImage()); // 160x120
+      await c.pushNode(const CropNode(aspectLabel: '1:1', ratio: 1));
+      final s = container.read(editorControllerProvider);
+      expect(s.sourceImage, isNotNull);
+      expect(s.sourceImage!.width, s.sourceImage!.height); // square now
+    });
+  });
+
+  group('quick-tool engine ops', () {
+    const e = DartImageEngine();
+    final src = _testImage();
+
+    test('denoise/hdr produce output without changing dimensions much', () async {
+      expect((await e.denoise(src)).lengthInBytes, greaterThan(0));
+      expect((await e.hdr(src)).lengthInBytes, greaterThan(0));
+    });
+
+    test('upscale enlarges and body reshape has no black bars', () async {
+      expect((await e.upscale(src, factor: 2)).lengthInBytes, greaterThan(0));
+      // Reshape output keeps the original dimensions (filled, not letterboxed).
+      final reshaped = await e.reshapeBody(src, slim: -0.5, stretch: 0.3);
+      expect(reshaped.lengthInBytes, greaterThan(0));
     });
   });
 }

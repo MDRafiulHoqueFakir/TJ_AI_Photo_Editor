@@ -100,9 +100,14 @@ class EditorState {
 const Object _noChange = Object();
 
 class EditorController extends Notifier<EditorState> {
+  bool _disposed = false;
+
   @override
   EditorState build() {
-    ref.onDispose(() => state.sourceImage?.dispose());
+    ref.onDispose(() {
+      _disposed = true;
+      state.sourceImage?.dispose();
+    });
     return const EditorState();
   }
 
@@ -122,6 +127,10 @@ class EditorController extends Notifier<EditorState> {
 
   /// Swap the live GPU texture, disposing the previous one exactly once.
   void _setSourceImage(ui.Image image, {bool processing = false}) {
+    if (_disposed) {
+      image.dispose(); // controller is gone; don't touch state, don't leak
+      return;
+    }
     final old = state.sourceImage;
     state = state.copyWith(sourceImage: image, isProcessing: processing);
     if (old != null && !identical(old, image)) old.dispose();
@@ -300,6 +309,7 @@ class EditorController extends Notifier<EditorState> {
     try {
       do {
         _renderAgain = false;
+        if (_disposed) break;
         final original = state.original;
         if (original == null) break;
         try {
@@ -307,9 +317,9 @@ class EditorController extends Notifier<EditorState> {
         } catch (e) {
           // Never let a single bad op take down the app; just stop the spinner.
           debugPrint('Editor render failed: $e');
-          state = state.copyWith(isProcessing: false);
+          if (!_disposed) state = state.copyWith(isProcessing: false);
         }
-      } while (_renderAgain);
+      } while (_renderAgain && !_disposed);
     } finally {
       _rendering = false;
     }
@@ -336,14 +346,16 @@ class EditorController extends Notifier<EditorState> {
           await _engine.reshapeBody(buffer, slim: slim, stretch: stretch),
         HealNode(:final dx, :final dy, :final radius) =>
           await _engine.heal(buffer, dx: dx, dy: dy, radius: radius),
-        CropNode() => buffer, // freeform crop rect handled by native engine
+        CropNode(:final ratio) => ratio == null
+            ? buffer
+            : await _engine.cropToAspect(buffer, ratio: ratio),
       };
     }
 
     final decoded = await decodeUiImage(buffer);
-    // A newer image was loaded while we were working — discard this result so we
-    // never dispose/replace the wrong texture.
-    if (gen != _generation) {
+    // A newer image was loaded (or the editor was disposed) while we were
+    // working — discard this result so we never replace the wrong texture.
+    if (_disposed || gen != _generation) {
       decoded.dispose();
       return;
     }

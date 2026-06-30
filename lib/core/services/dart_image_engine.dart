@@ -134,18 +134,106 @@ class DartImageEngine implements ImageEngine {
     if (image == null) return source;
     if (slim == 0 && stretch == 0) return source;
 
-    // Non-uniform scale then center-crop/pad back to the original canvas, so the
-    // output keeps the same dimensions while the subject appears slimmer/taller.
-    final newW = (image.width * (1 + slim.clamp(-1, 1) * 0.18)).round();
-    final newH = (image.height * (1 + stretch.clamp(-1, 1) * 0.18)).round();
-    final scaled = img.copyResize(image, width: newW, height: newH);
+    final w = image.width;
+    final h = image.height;
+    // Non-uniform squeeze/expand: slim<0 narrows (thinner), stretch>0 heightens.
+    var newW = (w * (1 + slim.clamp(-1.0, 1.0) * 0.18)).round();
+    var newH = (h * (1 + stretch.clamp(-1.0, 1.0) * 0.18)).round();
+    newW = newW < 1 ? 1 : newW;
+    newH = newH < 1 ? 1 : newH;
+    var scaled = img.copyResize(image, width: newW, height: newH);
 
-    final canvas = img.Image(width: image.width, height: image.height);
-    img.fill(canvas, color: img.ColorRgb8(0, 0, 0));
-    final dx = ((image.width - newW) / 2).round();
-    final dy = ((image.height - newH) / 2).round();
-    img.compositeImage(canvas, scaled, dstX: dx, dstY: dy);
-    return Uint8List.fromList(img.encodeJpg(canvas, quality: 92));
+    // Cover-fit back to (w, h) so the frame is filled — no black bars.
+    final coverScale = math.max(w / newW, h / newH);
+    if (coverScale > 1.0) {
+      scaled = img.copyResize(
+        scaled,
+        width: (newW * coverScale).ceil(),
+        height: (newH * coverScale).ceil(),
+      );
+    }
+    final cx = ((scaled.width - w) / 2).round().clamp(0, scaled.width - w);
+    final cy = ((scaled.height - h) / 2).round().clamp(0, scaled.height - h);
+    final out = img.copyCrop(scaled, x: cx, y: cy, width: w, height: h);
+    return Uint8List.fromList(img.encodeJpg(out, quality: 92));
+  }
+
+  @override
+  Future<Uint8List> cropToAspect(Uint8List source, {required double ratio}) async {
+    final image = img.decodeImage(source);
+    if (image == null) return source;
+    final w = image.width;
+    final h = image.height;
+    final current = w / h;
+    int cw, ch;
+    if (current > ratio) {
+      ch = h;
+      cw = (h * ratio).round();
+    } else {
+      cw = w;
+      ch = (w / ratio).round();
+    }
+    cw = cw.clamp(1, w);
+    ch = ch.clamp(1, h);
+    final out = img.copyCrop(
+      image,
+      x: ((w - cw) / 2).round(),
+      y: ((h - ch) / 2).round(),
+      width: cw,
+      height: ch,
+    );
+    return Uint8List.fromList(img.encodeJpg(out, quality: 92));
+  }
+
+  @override
+  Future<Uint8List> denoise(Uint8List source, {double amount = 0.5}) async {
+    final image = img.decodeImage(source);
+    if (image == null) return source;
+    final a = amount.clamp(0.0, 1.0);
+    if (a == 0) return source;
+    // Blur slightly, then blend back to keep edges — a light denoise.
+    final radius = (1 + a * 2).round();
+    final blurred = img.gaussianBlur(image.clone(), radius: radius);
+    final blend = 0.6 * a;
+    for (var y = 0; y < image.height; y++) {
+      for (var x = 0; x < image.width; x++) {
+        final s = image.getPixel(x, y);
+        final b = blurred.getPixel(x, y);
+        image.setPixelRgb(
+          x,
+          y,
+          s.r * (1 - blend) + b.r * blend,
+          s.g * (1 - blend) + b.g * blend,
+          s.b * (1 - blend) + b.b * blend,
+        );
+      }
+    }
+    return Uint8List.fromList(img.encodeJpg(image, quality: 92));
+  }
+
+  @override
+  Future<Uint8List> hdr(Uint8List source, {double amount = 0.6}) async {
+    final image = img.decodeImage(source);
+    if (image == null) return source;
+    final a = amount.clamp(0.0, 1.0);
+    var out = img.normalize(image.clone(), min: 0, max: 255);
+    out = img.adjustColor(out, contrast: 1 + 0.25 * a, saturation: 1 + 0.2 * a);
+    // Local-contrast pop via unsharp-like convolution.
+    out = img.convolution(out, filter: [0, -1, 0, -1, 5, -1, 0, -1, 0], div: 1);
+    return Uint8List.fromList(img.encodeJpg(out, quality: 92));
+  }
+
+  @override
+  Future<Uint8List> upscale(Uint8List source, {int factor = 2}) async {
+    final image = img.decodeImage(source);
+    if (image == null) return source;
+    final out = img.copyResize(
+      image,
+      width: image.width * factor,
+      height: image.height * factor,
+      interpolation: img.Interpolation.cubic,
+    );
+    return Uint8List.fromList(img.encodePng(out));
   }
 
   @override

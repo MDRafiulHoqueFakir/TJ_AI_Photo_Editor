@@ -42,11 +42,13 @@ class ResizeNode extends EditNode {
 }
 
 class CropNode extends EditNode {
-  const CropNode({required this.aspectLabel});
+  const CropNode({required this.aspectLabel, this.ratio});
   final String aspectLabel; // e.g. "1:1", "4:5"
+  final double? ratio; // width/height; null = Free (no crop)
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'crop', 'aspect': aspectLabel};
+  Map<String, dynamic> toJson() =>
+      {'type': 'crop', 'aspect': aspectLabel, 'ratio': ratio};
 }
 
 class OrientNode extends EditNode {
