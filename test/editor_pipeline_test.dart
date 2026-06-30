@@ -124,6 +124,14 @@ void main() {
       expect(ratio, closeTo(16 / 9, 0.15));
     });
 
+    test('smooth keeps a single SmoothNode (no compounding)', () async {
+      await c.loadImage(_testImage());
+      await c.commitSmooth(0.4);
+      await c.commitSmooth(0.7);
+      final s = container.read(editorControllerProvider);
+      expect(s.stack.whereType<SmoothNode>().length, 1);
+    });
+
     test('face: updateFace keeps a single FaceAdjustNode and edits', () async {
       await c.loadImage(_testImage());
       await c.updateFace(brighten: 0.5);

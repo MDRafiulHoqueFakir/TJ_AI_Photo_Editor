@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../application/editor_controller.dart';
-import '../../domain/edit_node.dart';
 
 /// Retouch: skin smoothing + tap-to-heal blemish removal. Smoothing commits a
 /// SmoothNode; heal mode lets the user tap blemishes on the photo (each tap is
@@ -40,8 +39,7 @@ class _RetouchPanelState extends ConsumerState<RetouchPanel> {
                 child: Slider(
                   value: _amount,
                   onChanged: (v) => setState(() => _amount = v),
-                  onChangeEnd: (v) =>
-                      controller.pushNode(SmoothNode(amount: v)),
+                  onChangeEnd: controller.commitSmooth,
                 ),
               ),
             ],

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/coming_soon_sheet.dart';
-import '../../tryon/presentation/tryon_screen.dart';
 import '../application/art_effects.dart';
 
 /// AI Studio. Tools that genuinely run on-device are grouped as "Ready to use";
@@ -36,10 +35,6 @@ class AiStudioScreen extends StatelessWidget {
           _header('Cloud AI', 'Generative tools that need an AI backend connected.'),
           const SizedBox(height: 12),
           _grid([
-            _Tool(Icons.checkroom, 'Professional Attire', AppColors.proGold,
-                () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(builder: (_) => const TryOnScreen()),
-                    ),),
             _Tool(Icons.content_cut, 'Hair Restyle', AppColors.textSecondary,
                 () => _cloud(context, 'Hair Restyle',
                     'new AI-generated hairstyles',),),

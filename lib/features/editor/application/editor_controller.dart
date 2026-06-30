@@ -330,6 +330,20 @@ class EditorController extends Notifier<EditorState> {
   Future<void> addHeal(double dx, double dy) =>
       pushNode(HealNode(dx: dx, dy: dy, radius: state.healRadius));
 
+  /// Apply skin smoothing, maintaining a single SmoothNode (replace, not stack)
+  /// so repeated slider releases don't compound into an over-blurred image.
+  Future<void> commitSmooth(double amount) async {
+    final stack = [...state.stack];
+    final node = SmoothNode(amount: amount);
+    if (stack.isNotEmpty && stack.last is SmoothNode) {
+      stack[stack.length - 1] = node;
+    } else {
+      stack.add(node);
+    }
+    state = state.copyWith(stack: stack, redoStack: const [], isProcessing: true);
+    await _render();
+  }
+
   // ---- Text overlays ----
 
   final _uuid = const Uuid();
