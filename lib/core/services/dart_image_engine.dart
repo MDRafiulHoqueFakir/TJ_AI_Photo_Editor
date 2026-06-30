@@ -107,21 +107,23 @@ class DartImageEngine implements ImageEngine {
     final radius = (1 + a * 4).round();
     final blurred = img.gaussianBlur(image.clone(), radius: radius);
 
-    // Blend original toward blurred by [a]: out = src*(1-a) + blur*a.
-    for (var y = 0; y < image.height; y++) {
-      for (var x = 0; x < image.width; x++) {
-        final s = image.getPixel(x, y);
-        final b = blurred.getPixel(x, y);
-        image.setPixelRgb(
-          x,
-          y,
-          s.r * (1 - a) + b.r * a,
-          s.g * (1 - a) + b.g * a,
-          s.b * (1 - a) + b.b * a,
-        );
-      }
+    // Flat raw-byte blend (no per-pixel objects): out = src*(1-a) + blur*a.
+    final src = image.getBytes(order: img.ChannelOrder.rgba);
+    final blur = blurred.getBytes(order: img.ChannelOrder.rgba);
+    final inv = 1 - a;
+    for (var i = 0; i < src.length; i += 4) {
+      src[i] = (src[i] * inv + blur[i] * a).toInt();
+      src[i + 1] = (src[i + 1] * inv + blur[i + 1] * a).toInt();
+      src[i + 2] = (src[i + 2] * inv + blur[i + 2] * a).toInt();
     }
-    return Uint8List.fromList(img.encodeJpg(image, quality: 92));
+    final out = img.Image.fromBytes(
+      width: image.width,
+      height: image.height,
+      bytes: src.buffer,
+      numChannels: 4,
+      order: img.ChannelOrder.rgba,
+    );
+    return Uint8List.fromList(img.encodeJpg(out, quality: 92));
   }
 
   @override
@@ -213,20 +215,22 @@ class DartImageEngine implements ImageEngine {
     final radius = (1 + a * 2).round();
     final blurred = img.gaussianBlur(image.clone(), radius: radius);
     final blend = 0.6 * a;
-    for (var y = 0; y < image.height; y++) {
-      for (var x = 0; x < image.width; x++) {
-        final s = image.getPixel(x, y);
-        final b = blurred.getPixel(x, y);
-        image.setPixelRgb(
-          x,
-          y,
-          s.r * (1 - blend) + b.r * blend,
-          s.g * (1 - blend) + b.g * blend,
-          s.b * (1 - blend) + b.b * blend,
-        );
-      }
+    final inv = 1 - blend;
+    final src = image.getBytes(order: img.ChannelOrder.rgba);
+    final blur = blurred.getBytes(order: img.ChannelOrder.rgba);
+    for (var i = 0; i < src.length; i += 4) {
+      src[i] = (src[i] * inv + blur[i] * blend).toInt();
+      src[i + 1] = (src[i + 1] * inv + blur[i + 1] * blend).toInt();
+      src[i + 2] = (src[i + 2] * inv + blur[i + 2] * blend).toInt();
     }
-    return Uint8List.fromList(img.encodeJpg(image, quality: 92));
+    final out = img.Image.fromBytes(
+      width: image.width,
+      height: image.height,
+      bytes: src.buffer,
+      numChannels: 4,
+      order: img.ChannelOrder.rgba,
+    );
+    return Uint8List.fromList(img.encodeJpg(out, quality: 92));
   }
 
   @override
@@ -370,10 +374,14 @@ class DartImageEngine implements ImageEngine {
     final radX = (rx * w).clamp(1.0, w.toDouble());
     final radY = (ry * h).clamp(1.0, h.toDouble());
 
-    final src = image.clone(); // sample source (for the slim warp)
     final blurred = smooth > 0
         ? img.gaussianBlur(image.clone(), radius: (1 + smooth * 4).round())
         : null;
+
+    // Raw byte buffers: sample from src, write to out (no per-pixel objects).
+    final srcB = image.getBytes(order: img.ChannelOrder.rgba);
+    final outB = Uint8List.fromList(srcB);
+    final blurB = blurred?.getBytes(order: img.ChannelOrder.rgba);
 
     final x0 = (centerX - radX * 1.4).floor().clamp(0, w - 1);
     final x1 = (centerX + radX * 1.4).ceil().clamp(0, w - 1);
@@ -381,6 +389,7 @@ class DartImageEngine implements ImageEngine {
     final y1 = (centerY + radY * 1.4).ceil().clamp(0, h - 1);
 
     for (var y = y0; y <= y1; y++) {
+      final rowBase = y * w;
       for (var x = x0; x <= x1; x++) {
         final nx = (x - centerX) / radX;
         final ny = (y - centerY) / radY;
@@ -392,15 +401,16 @@ class DartImageEngine implements ImageEngine {
         var sx = x.toDouble();
         if (slim != 0) sx = centerX + (x - centerX) * (1 + slim * 0.6 * mask);
         final sxi = sx.round().clamp(0, w - 1);
-        final p = src.getPixel(sxi, y);
-        var r = p.r.toDouble(), g = p.g.toDouble(), b = p.b.toDouble();
+        final si = (rowBase + sxi) * 4;
+        var r = srcB[si].toDouble();
+        var g = srcB[si + 1].toDouble();
+        var b = srcB[si + 2].toDouble();
 
-        if (blurred != null) {
-          final bp = blurred.getPixel(sxi, y);
+        if (blurB != null) {
           final t = smooth * mask * 0.85;
-          r = r * (1 - t) + bp.r * t;
-          g = g * (1 - t) + bp.g * t;
-          b = b * (1 - t) + bp.b * t;
+          r = r * (1 - t) + blurB[si] * t;
+          g = g * (1 - t) + blurB[si + 1] * t;
+          b = b * (1 - t) + blurB[si + 2] * t;
         }
         if (brighten != 0) {
           final add = brighten * 60 * mask;
@@ -408,10 +418,20 @@ class DartImageEngine implements ImageEngine {
           g += add;
           b += add;
         }
-        image.setPixelRgb(x, y, r.clamp(0, 255), g.clamp(0, 255), b.clamp(0, 255));
+        final oi = (rowBase + x) * 4;
+        outB[oi] = r.clamp(0, 255).toInt();
+        outB[oi + 1] = g.clamp(0, 255).toInt();
+        outB[oi + 2] = b.clamp(0, 255).toInt();
       }
     }
-    return Uint8List.fromList(img.encodeJpg(image, quality: 92));
+    final out = img.Image.fromBytes(
+      width: w,
+      height: h,
+      bytes: outB.buffer,
+      numChannels: 4,
+      order: img.ChannelOrder.rgba,
+    );
+    return Uint8List.fromList(img.encodeJpg(out, quality: 92));
   }
 
   @override

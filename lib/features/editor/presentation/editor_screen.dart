@@ -134,14 +134,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                 'Saved to: $savedAs',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 12),
+                    color: AppColors.textSecondary, fontSize: 12,),
               ),
             if (!ok)
               Text(
                 error!,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 12),
+                    color: AppColors.textSecondary, fontSize: 12,),
               ),
             if (ok && !ent.isPro) ...[
               const SizedBox(height: 8),
@@ -285,7 +285,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         const SingleActivator(LogicalKeyboardKey.keyZ, meta: true):
             notifier.undo,
         const SingleActivator(LogicalKeyboardKey.keyZ,
-            control: true, shift: true): notifier.redo,
+            control: true, shift: true,): notifier.redo,
         const SingleActivator(LogicalKeyboardKey.keyZ, meta: true, shift: true):
             notifier.redo,
         const SingleActivator(LogicalKeyboardKey.keyY, control: true):

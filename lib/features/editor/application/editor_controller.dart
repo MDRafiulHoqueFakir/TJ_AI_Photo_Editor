@@ -137,9 +137,10 @@ class EditorController extends Notifier<EditorState> {
 
   ImageEngine get _engine => ref.read(imageEngineProvider);
 
-  /// Long-edge cap for the working image. Bounds memory + per-pixel CPU work so
-  /// edits stay responsive and can't crash the tab on very large photos.
-  static const _maxWorkingEdge = 1600;
+  /// Long-edge cap for the working image. Kept modest so the on-device
+  /// per-pixel ops (retouch/face/body) stay fast on web; the editor downscales
+  /// huge photos to this on load.
+  static const _maxWorkingEdge = 1200;
 
   // Render serialization + a generation guard. Rapid edits (e.g. dragging the
   // body slider) used to fire overlapping renders that double-disposed the GPU
