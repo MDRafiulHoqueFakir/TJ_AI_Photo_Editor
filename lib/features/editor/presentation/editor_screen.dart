@@ -1,6 +1,8 @@
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -35,6 +37,32 @@ class EditorScreen extends ConsumerStatefulWidget {
 class _EditorScreenState extends ConsumerState<EditorScreen> {
   EditorTool _activeTool = EditorTool.adjust;
   bool _comparing = false;
+  final TransformationController _tc = TransformationController();
+
+  @override
+  void dispose() {
+    _tc.dispose();
+    super.dispose();
+  }
+
+  /// Mouse-wheel / trackpad zoom toward the cursor (1x–5x).
+  void _onScroll(PointerSignalEvent e) {
+    if (e is! PointerScrollEvent) return;
+    final m = _tc.value.clone();
+    final current = m.getMaxScaleOnAxis();
+    var factor = e.scrollDelta.dy < 0 ? 1.12 : 1 / 1.12;
+    final next = (current * factor).clamp(1.0, 5.0);
+    factor = next / current;
+    if ((factor - 1).abs() < 1e-3) return;
+    final p = e.localPosition;
+    // Zoom toward the cursor: T(p) · S(factor) · T(-p) · current.
+    final zoom = Matrix4.translationValues(p.dx, p.dy, 0)
+        .multiplied(Matrix4.diagonal3Values(factor, factor, 1))
+        .multiplied(Matrix4.translationValues(-p.dx, -p.dy, 0));
+    _tc.value = zoom.multiplied(m);
+  }
+
+  void _resetZoom() => _tc.value = Matrix4.identity();
 
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -89,7 +117,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             Text(
               !ok
                   ? 'Export failed'
-                  : (ent.isPro ? 'Saved in full quality' : 'Saved (watermarked)'),
+                  : (ent.isPro
+                      ? 'Saved in full quality'
+                      : 'Saved (watermarked)'),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -103,13 +133,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               Text(
                 'Saved to: $savedAs',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12),
               ),
             if (!ok)
               Text(
                 error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12),
               ),
             if (ok && !ent.isPro) ...[
               const SizedBox(height: 8),
@@ -151,8 +183,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(editorControllerProvider);
+    final notifier = ref.read(editorControllerProvider.notifier);
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -178,31 +211,50 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       body: Column(
         children: [
           Expanded(
-            child: GestureDetector(
-              onLongPressStart:
-                  state.hasImage ? (_) => setState(() => _comparing = true) : null,
-              onLongPressEnd:
-                  state.hasImage ? (_) => setState(() => _comparing = false) : null,
-              child: Container(
-                color: Colors.black,
-                width: double.infinity,
-                alignment: Alignment.center,
-                child: _CanvasView(
-                  state: state,
-                  comparing: _comparing,
-                  onPick: _pickImage,
-                  onDragOverlay:
-                      ref.read(editorControllerProvider.notifier).dragOverlay,
-                  onSelectOverlay:
-                      ref.read(editorControllerProvider.notifier).selectOverlay,
-                  onHealTap:
-                      ref.read(editorControllerProvider.notifier).addHeal,
-                  onCropChanged:
-                      ref.read(editorControllerProvider.notifier).setCropRect,
-                  faceMode: _activeTool == EditorTool.face,
-                  onFaceRectChanged: (r) => ref
-                      .read(editorControllerProvider.notifier)
-                      .updateFace(rect: r),
+            child: Listener(
+              onPointerSignal: state.hasImage ? _onScroll : null,
+              child: GestureDetector(
+                onLongPressStart: state.hasImage
+                    ? (_) => setState(() => _comparing = true)
+                    : null,
+                onLongPressEnd: state.hasImage
+                    ? (_) => setState(() => _comparing = false)
+                    : null,
+                onDoubleTap: state.hasImage ? _resetZoom : null,
+                child: InteractiveViewer(
+                  transformationController: _tc,
+                  minScale: 1,
+                  maxScale: 5,
+                  // Disable drag-pan while a precise overlay (crop/face) is
+                  // being edited so its handles get the gestures; zoom still works.
+                  panEnabled:
+                      !(state.freeCropMode || _activeTool == EditorTool.face),
+                  child: Container(
+                    color: Colors.black,
+                    width: double.infinity,
+                    height: double.infinity,
+                    alignment: Alignment.center,
+                    child: _CanvasView(
+                      state: state,
+                      comparing: _comparing,
+                      onPick: _pickImage,
+                      onDragOverlay: ref
+                          .read(editorControllerProvider.notifier)
+                          .dragOverlay,
+                      onSelectOverlay: ref
+                          .read(editorControllerProvider.notifier)
+                          .selectOverlay,
+                      onHealTap:
+                          ref.read(editorControllerProvider.notifier).addHeal,
+                      onCropChanged: ref
+                          .read(editorControllerProvider.notifier)
+                          .setCropRect,
+                      faceMode: _activeTool == EditorTool.face,
+                      onFaceRectChanged: (r) => ref
+                          .read(editorControllerProvider.notifier)
+                          .updateFace(rect: r),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -223,6 +275,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           ],
         ],
       ),
+    );
+
+    // Keyboard shortcuts: Ctrl/Cmd+Z = undo, Ctrl+Y / Ctrl+Shift+Z = redo.
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true):
+            notifier.undo,
+        const SingleActivator(LogicalKeyboardKey.keyZ, meta: true):
+            notifier.undo,
+        const SingleActivator(LogicalKeyboardKey.keyZ,
+            control: true, shift: true): notifier.redo,
+        const SingleActivator(LogicalKeyboardKey.keyZ, meta: true, shift: true):
+            notifier.redo,
+        const SingleActivator(LogicalKeyboardKey.keyY, control: true):
+            notifier.redo,
+      },
+      child: Focus(autofocus: true, child: scaffold),
     );
   }
 }
@@ -326,8 +395,11 @@ class _CanvasView extends StatelessWidget {
               Positioned.fromRect(
                 rect: inner,
                 child: comparing
-                    ? Image.memory(state.original!,
-                        fit: BoxFit.contain, gaplessPlayback: true,)
+                    ? Image.memory(
+                        state.original!,
+                        fit: BoxFit.contain,
+                        gaplessPlayback: true,
+                      )
                     : AdjustedImage(
                         image: image,
                         params: state.adjust,
@@ -418,8 +490,10 @@ class _CropBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          const Text('Drag the box, then apply',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),),
+          const Text(
+            'Drag the box, then apply',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          ),
           const Spacer(),
           TextButton.icon(
             onPressed: onCancel,
