@@ -112,6 +112,18 @@ void main() {
       expect(s.sourceImage!.width, s.sourceImage!.height); // square now
     });
 
+    test('consecutive aspect crops refresh (replace, not compound)', () async {
+      await c.loadImage(_testImage()); // 160x120
+      await c.applyAspectCrop('1:1', 1);
+      await c.applyAspectCrop('16:9', 16 / 9);
+      final s = container.read(editorControllerProvider);
+      // Exactly one crop node — the second replaced the first.
+      expect(s.stack.whereType<CropNode>().length, 1);
+      // Cropped from the ORIGINAL to 16:9, not from the prior 1:1 crop.
+      final ratio = s.sourceImage!.width / s.sourceImage!.height;
+      expect(ratio, closeTo(16 / 9, 0.15));
+    });
+
     test('free crop: begin, drag a box, apply crops to it', () async {
       await c.loadImage(_testImage()); // 160x120
       c.beginFreeCrop();

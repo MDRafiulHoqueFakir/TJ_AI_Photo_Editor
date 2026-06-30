@@ -37,16 +37,13 @@ class CropPanel extends ConsumerWidget {
               itemBuilder: (_, i) => ActionChip(
                 label: Text(_aspects[i].label),
                 onPressed: () {
-                  // "Free" opens the draggable crop box; presets crop directly.
-                  if (_aspects[i].ratio == null) {
+                  // "Free" opens the draggable crop box; presets crop from the
+                  // base image and refresh on each new ratio tap.
+                  final r = _aspects[i].ratio;
+                  if (r == null) {
                     controller.beginFreeCrop();
                   } else {
-                    controller.pushNode(
-                      CropNode(
-                        aspectLabel: _aspects[i].label,
-                        ratio: _aspects[i].ratio,
-                      ),
-                    );
+                    controller.applyAspectCrop(_aspects[i].label, r);
                   }
                 },
               ),

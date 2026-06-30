@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../tryon/presentation/tryon_screen.dart';
 import '../application/passport_service.dart';
 
 /// Passport / ID maker — functional in pure Dart: pick a photo, crop it to the
@@ -99,6 +100,48 @@ class _PassportScreenState extends State<PassportScreen> {
           style: TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 12),
+        // AI formal attire (corporate dress on a selfie). Generation runs on a
+        // backend; the flow is here and turns on once that's connected.
+        InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const TryOnScreen()),
+          ),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: AppColors.premiumGradient,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.checkroom, color: Colors.white, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AI Formal Attire',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        'Put a suit / formal dress on your selfie',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: Colors.white),
+              ],
+            ),
+          ),
+        ),
         for (final spec in PassportSpec.catalog)
           Container(
             margin: const EdgeInsets.only(bottom: 10),
