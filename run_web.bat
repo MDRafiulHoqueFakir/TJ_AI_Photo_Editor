@@ -4,22 +4,28 @@ title TJ Photo Editor (Web)
 cd /d "%~dp0"
 where flutter >nul 2>nul || set "PATH=%USERPROFILE%\flutter\bin;%PATH%"
 
-REM --- AI token (one-time). Saved to .replicate-token; never asked again. ---
-if not exist ".replicate-token" (
+REM --- AI token (one-time). Treats a missing OR empty file as "needs token". ---
+set "NEEDTOKEN=1"
+if exist ".replicate-token" for %%A in (".replicate-token") do if %%~zA GTR 5 set "NEEDTOKEN="
+if defined NEEDTOKEN (
   echo.
   echo ==================================================
   echo   Optional: enable cloud AI features
-  echo   ^(Background Remover, etc.^)
+  echo   ^(Background Remover, Hair Restyle, etc.^)
   echo.
   echo   Paste your Replicate API token and press Enter,
   echo   or just press Enter to skip ^(all on-device
   echo   tools work without it^).
   echo   Get a token: https://replicate.com/account/api-tokens
   echo ==================================================
+  set "TJTOKEN="
   set /p "TJTOKEN=Replicate token (or Enter to skip): "
   if not "!TJTOKEN!"=="" (
-    >".replicate-token" echo !TJTOKEN!
-    echo   Saved - AI features enabled.
+    >".replicate-token" <nul set /p "=!TJTOKEN!"
+    echo.
+    for %%A in (".replicate-token") do if %%~zA GTR 5 (echo   Saved - AI features enabled.) else (echo   WARNING: token did not save. Try again.)
+  ) else (
+    if exist ".replicate-token" del ".replicate-token"
   )
   echo.
 )
