@@ -3,8 +3,14 @@ title TJ Photo Editor (Web)
 cd /d "%~dp0"
 where flutter >nul 2>nul || set "PATH=%USERPROFILE%\flutter\bin;%PATH%"
 
-if not exist "build\web\index.html" (
-  echo First-time setup: building the app ^(about 1-2 minutes^)...
+REM Rebuild if there's no build, or if the bootstrap is empty/corrupt
+REM (an empty flutter_bootstrap.js makes the app freeze on the loading screen).
+set "REBUILD="
+if not exist "build\web\index.html" set "REBUILD=1"
+if not exist "build\web\flutter_bootstrap.js" set "REBUILD=1"
+for %%A in ("build\web\flutter_bootstrap.js") do if %%~zA LSS 100 set "REBUILD=1"
+if defined REBUILD (
+  echo Building the app ^(about 1-2 minutes^)...
   call flutter build web || goto :err
 )
 
