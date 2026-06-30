@@ -397,9 +397,9 @@ class DartImageEngine implements ImageEngine {
         if (d > 1.4) continue;
         final mask = d <= 1.0 ? 1.0 : (1.4 - d) / 0.4; // feathered edge
 
-        // Slim: sample from a wider source so the face compresses inward.
+        // slim<0 = thinner (sample wider), slim>0 = wider (sample narrower).
         var sx = x.toDouble();
-        if (slim != 0) sx = centerX + (x - centerX) * (1 + slim * 0.6 * mask);
+        if (slim != 0) sx = centerX + (x - centerX) * (1 - slim * 0.6 * mask);
         final sxi = sx.round().clamp(0, w - 1);
         final si = (rowBase + sxi) * 4;
         var r = srcB[si].toDouble();

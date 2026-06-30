@@ -246,16 +246,13 @@ class EditorController extends Notifier<EditorState> {
   /// Select a frame/border ('' clears it).
   void selectFrame(String id) => state = state.copyWith(frameId: id);
 
-  /// Apply an aspect-ratio crop. Consecutive ratio taps REPLACE the previous
-  /// one (so each ratio crops from the same base, not a compounding crop).
+  /// Apply an aspect-ratio crop. Drops any previous aspect crop first, so each
+  /// ratio tap re-crops cleanly (refreshes) instead of compounding.
   Future<void> applyAspectCrop(String label, double ratio) async {
-    final stack = [...state.stack];
-    final node = CropNode(aspectLabel: label, ratio: ratio);
-    if (stack.isNotEmpty && stack.last is CropNode && !(stack.last as CropNode).hasRect) {
-      stack[stack.length - 1] = node; // refresh to the new ratio
-    } else {
-      stack.add(node);
-    }
+    final stack = state.stack
+        .where((n) => !(n is CropNode && !n.hasRect)) // remove prior ratio crops
+        .toList()
+      ..add(CropNode(aspectLabel: label, ratio: ratio));
     state = state.copyWith(stack: stack, redoStack: const [], isProcessing: true);
     await _render();
   }
