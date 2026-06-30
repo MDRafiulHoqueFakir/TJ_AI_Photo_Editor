@@ -1,10 +1,30 @@
 @echo off
+setlocal enabledelayedexpansion
 title TJ Photo Editor (Web)
 cd /d "%~dp0"
 where flutter >nul 2>nul || set "PATH=%USERPROFILE%\flutter\bin;%PATH%"
 
-REM Rebuild if there's no build, or if the bootstrap is empty/corrupt
-REM (an empty flutter_bootstrap.js makes the app freeze on the loading screen).
+REM --- AI token (one-time). Saved to .replicate-token; never asked again. ---
+if not exist ".replicate-token" (
+  echo.
+  echo ==================================================
+  echo   Optional: enable cloud AI features
+  echo   ^(Background Remover, etc.^)
+  echo.
+  echo   Paste your Replicate API token and press Enter,
+  echo   or just press Enter to skip ^(all on-device
+  echo   tools work without it^).
+  echo   Get a token: https://replicate.com/account/api-tokens
+  echo ==================================================
+  set /p "TJTOKEN=Replicate token (or Enter to skip): "
+  if not "!TJTOKEN!"=="" (
+    >".replicate-token" echo !TJTOKEN!
+    echo   Saved - AI features enabled.
+  )
+  echo.
+)
+
+REM --- Rebuild if there's no build or the bootstrap is corrupt/empty. ---
 set "REBUILD="
 if not exist "build\web\index.html" set "REBUILD=1"
 if not exist "build\web\flutter_bootstrap.js" set "REBUILD=1"

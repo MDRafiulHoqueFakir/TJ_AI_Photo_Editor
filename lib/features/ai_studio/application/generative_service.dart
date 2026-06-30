@@ -56,7 +56,16 @@ abstract class GenerativeService {
       return GenerativeResult(error: 'Service error (${r.statusCode}).');
     }
 
-    final pred = jsonDecode(r.body) as Map<String, dynamic>;
+    Map<String, dynamic> pred;
+    try {
+      pred = jsonDecode(r.body) as Map<String, dynamic>;
+    } catch (_) {
+      // Not JSON — usually the proxy isn't running (app not launched via
+      // run_web.bat) so /api/replicate fell through to the static handler.
+      return const GenerativeResult(
+        error: 'AI service not reachable. Launch with run_web.bat and set a token.',
+      );
+    }
     if (pred['status'] == 'failed') {
       return GenerativeResult(error: pred['error']?.toString() ?? 'Generation failed.');
     }

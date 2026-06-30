@@ -98,6 +98,11 @@ class _QuickToolsScreenState extends ConsumerState<QuickToolsScreen> {
           const SnackBar(content: Text('Done. Saved to downloads.')),
         );
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
