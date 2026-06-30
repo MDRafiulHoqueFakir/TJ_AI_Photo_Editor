@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../shared/widgets/coming_soon_sheet.dart';
 import '../application/generative_service.dart';
 
 /// Replicate models used by the generative features.
@@ -53,14 +52,7 @@ abstract class GenerativeFlow {
     if (!context.mounted) return;
 
     if (res.error == 'no-token') {
-      showComingSoon(
-        context,
-        title: 'Connect your AI key',
-        reason:
-            'This uses a cloud AI model. Launch with run_web.bat and paste your '
-            'Replicate token when asked (it is saved for next time). See '
-            'docs/GENERATIVE_AI.md. On-device tools work without it.',
-      );
+      await connectKey(context);
       return;
     }
     if (!res.ok) {
@@ -70,6 +62,63 @@ abstract class GenerativeFlow {
       return;
     }
     await _showResult(context, title, res.image!);
+  }
+
+  /// Paste-the-token dialog (browser paste is reliable, unlike the console).
+  /// Saves it to the local server via /api/set-token.
+  static Future<void> connectKey(BuildContext context) async {
+    final ctrl = TextEditingController();
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Connect your AI key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Paste your Replicate API token (starts with r8_). Get one free at '
+              'replicate.com/account/api-tokens. Saved on your machine, never shared.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'r8_...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final ok = await GenerativeService.setToken(ctrl.text);
+              if (context.mounted) Navigator.pop(context, ok);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (!context.mounted) return;
+    if (saved == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Key saved — tap the feature again to generate.')),
+      );
+    } else if (saved == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save. Make sure you launched via run_web.bat.'),
+        ),
+      );
+    }
   }
 
   static Future<String?> _askPrompt(

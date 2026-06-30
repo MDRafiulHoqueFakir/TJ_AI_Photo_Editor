@@ -60,6 +60,23 @@ async function handleApi(req, res, urlPath) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ hasToken: !!token }));
   }
+  // Save a token pasted from the app (browser paste is far more reliable than
+  // the console). Localhost only; written to .replicate-token.
+  if (urlPath === '/api/set-token' && req.method === 'POST') {
+    try {
+      const t = (JSON.parse(await readBody(req)).token || '').trim();
+      if (!t) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ ok: false }));
+      }
+      fs.writeFileSync(path.join(__dirname, '..', '.replicate-token'), t);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ ok: true }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ ok: false, error: String(e) }));
+    }
+  }
   if (urlPath === '/api/replicate' && req.method === 'POST') {
     if (!token) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -67,20 +84,29 @@ async function handleApi(req, res, urlPath) {
     }
     try {
       const { model, input } = JSON.parse(await readBody(req));
-      // `Prefer: wait` blocks until the prediction finishes (up to ~60s),
-      // so the output is returned directly — no polling needed.
-      const r = await fetch(
+      const auth = { Authorization: `Bearer ${token}` };
+      const headers = { ...auth, 'Content-Type': 'application/json', Prefer: 'wait' };
+      // 1) Official-model endpoint (works for org models like black-forest-labs).
+      // `Prefer: wait` blocks until done (up to ~60s) — output returned directly.
+      let r = await fetch(
         `https://api.replicate.com/v1/models/${model}/predictions`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            Prefer: 'wait',
-          },
-          body: JSON.stringify({ input }),
-        },
+        { method: 'POST', headers, body: JSON.stringify({ input }) },
       );
+      // 2) Community models 404 on the above — resolve their latest version and
+      //    create the prediction the version-based way instead.
+      if (r.status === 404) {
+        const mres = await fetch(`https://api.replicate.com/v1/models/${model}`, { headers: auth });
+        if (mres.ok) {
+          const version = (await mres.json()).latest_version?.id;
+          if (version) {
+            r = await fetch('https://api.replicate.com/v1/predictions', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ version, input }),
+            });
+          }
+        }
+      }
       const text = await r.text();
       if (!r.ok) {
         res.writeHead(r.status, { 'Content-Type': 'application/json' });

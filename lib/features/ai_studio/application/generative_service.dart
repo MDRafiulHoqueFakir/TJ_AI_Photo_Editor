@@ -26,6 +26,20 @@ abstract class GenerativeService {
     }
   }
 
+  /// Save the user's token via the local proxy (browser paste -> file on disk).
+  static Future<bool> setToken(String token) async {
+    try {
+      final r = await http.post(
+        Uri.parse('/api/set-token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'token': token.trim()}),
+      );
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Run a Replicate model ("owner/name") with [input]; returns the first
   /// output image. [imageBytes], when given, is sent as a data-URI under the
   /// [imageKey] input field (most image models use "image").
@@ -53,7 +67,14 @@ abstract class GenerativeService {
       return const GenerativeResult(error: 'no-token');
     }
     if (r.statusCode >= 400) {
-      return GenerativeResult(error: 'Service error (${r.statusCode}).');
+      // Surface the real Replicate error (model not found, invalid input,
+      // billing required, etc.) instead of a generic message.
+      var detail = 'Error ${r.statusCode}';
+      try {
+        final j = jsonDecode(r.body) as Map<String, dynamic>;
+        detail = (j['detail'] ?? j['title'] ?? j['error'] ?? detail).toString();
+      } catch (_) {}
+      return GenerativeResult(error: detail);
     }
 
     Map<String, dynamic> pred;
