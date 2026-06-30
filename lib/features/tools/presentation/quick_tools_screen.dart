@@ -9,9 +9,8 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/services/dart_image_engine.dart';
 import '../../../core/services/image_engine.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../shared/widgets/coming_soon_sheet.dart';
 import '../../../shared/widgets/feature_grid.dart';
-import '../../ai_studio/application/generative_service.dart';
+import '../../ai_studio/presentation/generative_flow.dart';
 
 /// Quick one-shot tools. The on-device ones (upscale, denoise, HDR) run for
 /// real; object/background removal need the segmentation model and say so.
@@ -46,65 +45,20 @@ class _QuickToolsScreenState extends ConsumerState<QuickToolsScreen> {
       case 'HDR':
         await _run((b) => _engine.hdr(b, amount: 0.7), 'hdr');
       case 'Object Remover':
-        // The Editor's Retouch > Heal already removes small objects on-device.
-        showComingSoon(
+        await GenerativeFlow.run(
           context,
+          model: GenModels.edit,
+          imageKey: 'input_image',
           title: 'Object Remover',
-          reason:
-              'For small objects/blemishes, use Editor > Retouch > Heal (works '
-              'now). Full object removal needs the on-device inpainting model, '
-              'which is being bundled.',
+          promptLabel: 'What to remove? e.g. "the person on the left"',
+          defaultPrompt: 'remove ',
         );
       case 'BG Remover':
-        await _generative('cjwbw/rembg', 'bg_removed');
-    }
-  }
-
-  /// Run a Replicate model (via the local proxy) on a picked photo and save the
-  /// result. Explains clearly when the AI backend / token isn't set up.
-  Future<void> _generative(String model, String suffix) async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-    setState(() => _busy = true);
-    try {
-      final bytes = await picked.readAsBytes();
-      final res = await GenerativeService.run(model, const {}, imageBytes: bytes);
-      if (!mounted) return;
-      if (res.error == 'no-token') {
-        showComingSoon(
+        await GenerativeFlow.run(
           context,
-          title: 'Connect your AI key',
-          reason:
-              'This uses a cloud AI model. Put your Replicate API token in a file '
-              'named ".replicate-token" in the app folder, then relaunch via '
-              'run_web.bat. (Free on-device tools work without it.)',
+          model: GenModels.bgRemove,
+          title: 'Background Remover',
         );
-        return;
-      }
-      if (!res.ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res.error ?? 'Failed.')),
-        );
-        return;
-      }
-      await FileSaver.instance.saveFile(
-        name: 'tj_${suffix}_${DateTime.now().millisecondsSinceEpoch}',
-        bytes: res.image!,
-        fileExtension: 'png',
-        mimeType: MimeType.png,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Done. Saved to downloads.')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
   }
 

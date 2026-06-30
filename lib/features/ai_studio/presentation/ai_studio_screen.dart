@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../shared/widgets/coming_soon_sheet.dart';
 import '../application/art_effects.dart';
+import 'generative_flow.dart';
 
 /// AI Studio. Tools that genuinely run on-device are grouped as "Ready to use";
 /// truly generative tools (which need a GPU backend) are grouped separately and
@@ -35,15 +35,32 @@ class AiStudioScreen extends StatelessWidget {
           _header('Cloud AI', 'Generative tools that need an AI backend connected.'),
           const SizedBox(height: 12),
           _grid([
-            _Tool(Icons.content_cut, 'Hair Restyle', AppColors.textSecondary,
-                () => _cloud(context, 'Hair Restyle',
-                    'new AI-generated hairstyles',),),
-            _Tool(Icons.auto_awesome, 'Generative Fill', AppColors.textSecondary,
-                () => _cloud(context, 'Generative Fill',
-                    'replacing/extending parts of a photo',),),
-            _Tool(Icons.wallpaper, 'BG Generate', AppColors.textSecondary,
-                () => _cloud(context, 'Background Generate',
-                    'AI-generated backgrounds',),),
+            _Tool(Icons.content_cut, 'Hair Restyle', AppColors.proGold,
+                () => GenerativeFlow.run(
+                      context,
+                      model: GenModels.edit,
+                      imageKey: 'input_image',
+                      title: 'Hair Restyle',
+                      promptLabel: 'e.g. "give this person short curly hair"',
+                      defaultPrompt: 'change the hairstyle to ',
+                    ),),
+            _Tool(Icons.auto_awesome, 'Generative Fill', AppColors.proGold,
+                () => GenerativeFlow.run(
+                      context,
+                      model: GenModels.edit,
+                      imageKey: 'input_image',
+                      title: 'Generative Fill',
+                      promptLabel: 'Describe what to add / replace',
+                    ),),
+            _Tool(Icons.wallpaper, 'BG Generate', AppColors.proGold,
+                () => GenerativeFlow.run(
+                      context,
+                      model: GenModels.edit,
+                      imageKey: 'input_image',
+                      title: 'Background',
+                      promptLabel: 'e.g. "change the background to a beach"',
+                      defaultPrompt: 'change the background to ',
+                    ),),
           ]),
         ],
       ),
@@ -52,18 +69,6 @@ class AiStudioScreen extends StatelessWidget {
 
   void _art(BuildContext context, ArtStyle style) {
     context.push(Routes.aiArt, extra: style);
-  }
-
-  void _cloud(BuildContext context, String title, String what) {
-    showComingSoon(
-      context,
-      title: title,
-      reason:
-          'This generates $what on cloud GPUs (Replicate). Add your token in a '
-          '".replicate-token" file and launch via run_web.bat — see '
-          'docs/GENERATIVE_AI.md. Background Remover in Quick Tools already works '
-          'this way; hair/fill/bg-generate need a model + prompt wired next.',
-    );
   }
 
   Widget _header(String title, String subtitle) {

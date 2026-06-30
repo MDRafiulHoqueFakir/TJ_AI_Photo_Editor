@@ -82,8 +82,26 @@ async function handleApi(req, res, urlPath) {
         },
       );
       const text = await r.text();
-      res.writeHead(r.status, { 'Content-Type': 'application/json' });
-      return res.end(text);
+      if (!r.ok) {
+        res.writeHead(r.status, { 'Content-Type': 'application/json' });
+        return res.end(text);
+      }
+      const pred = JSON.parse(text);
+      // Fetch the result image server-side and hand it back as a data URI, so
+      // the browser never makes a cross-origin request for it.
+      let image = null;
+      const out = pred.output;
+      const url = Array.isArray(out) ? out[0] : out;
+      if (typeof url === 'string' && url.startsWith('http')) {
+        try {
+          const imgRes = await fetch(url);
+          const buf = Buffer.from(await imgRes.arrayBuffer());
+          const ct = imgRes.headers.get('content-type') || 'image/png';
+          image = `data:${ct};base64,${buf.toString('base64')}`;
+        } catch (_) {}
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ status: pred.status, error: pred.error, image }));
     } catch (e) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ error: String(e) }));

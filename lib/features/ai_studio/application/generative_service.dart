@@ -69,16 +69,16 @@ abstract class GenerativeService {
     if (pred['status'] == 'failed') {
       return GenerativeResult(error: pred['error']?.toString() ?? 'Generation failed.');
     }
-    final out = pred['output'];
-    final url = out is List ? (out.isNotEmpty ? out.first as String : null) : out as String?;
-    if (url == null) return const GenerativeResult(error: 'No output produced.');
-
+    // The proxy returns the result image inline as a data URI (no CORS fetch).
+    final dataUri = pred['image'] as String?;
+    if (dataUri == null || !dataUri.contains(',')) {
+      return const GenerativeResult(error: 'No output produced.');
+    }
     try {
-      final img = await http.get(Uri.parse(url));
-      if (img.statusCode != 200) return const GenerativeResult(error: 'Could not fetch result.');
-      return GenerativeResult(image: img.bodyBytes);
-    } catch (e) {
-      return GenerativeResult(error: 'Could not fetch result ($e).');
+      final bytes = base64Decode(dataUri.substring(dataUri.indexOf(',') + 1));
+      return GenerativeResult(image: bytes);
+    } catch (_) {
+      return const GenerativeResult(error: 'Could not read the result.');
     }
   }
 }
