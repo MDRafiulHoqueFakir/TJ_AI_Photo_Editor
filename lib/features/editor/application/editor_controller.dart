@@ -110,18 +110,48 @@ class EditorController extends Notifier<EditorState> {
 
   /// Long-edge cap for the working image. Bounds memory + per-pixel CPU work so
   /// edits stay responsive and can't crash the tab on very large photos.
-  static const _maxWorkingEdge = 2048;
+  static const _maxWorkingEdge = 1600;
+
+  // Render serialization + a generation guard. Rapid edits (e.g. dragging the
+  // body slider) used to fire overlapping renders that double-disposed the GPU
+  // texture — a real crash on web. Now renders run one-at-a-time and coalesce,
+  // and a stale render can't clobber a freshly loaded image.
+  bool _rendering = false;
+  bool _renderAgain = false;
+  int _generation = 0;
+
+  /// Swap the live GPU texture, disposing the previous one exactly once.
+  void _setSourceImage(ui.Image image, {bool processing = false}) {
+    final old = state.sourceImage;
+    state = state.copyWith(sourceImage: image, isProcessing: processing);
+    if (old != null && !identical(old, image)) old.dispose();
+  }
 
   Future<void> loadImage(Uint8List bytes) async {
-    // Downscale huge photos up front (the #1 cause of editor crashes/OOM).
-    Uint8List working;
+    _generation++; // invalidate any in-flight render from a prior image
+    final old = state.sourceImage;
+    // Decode + downscale NATIVELY on the GPU (fast on web). Using package:image
+    // here froze the tab for seconds on large photos — the editor's #1 crash.
     try {
-      working = await _engine.fitWithin(bytes, maxLongEdge: _maxWorkingEdge);
-    } catch (_) {
-      working = bytes;
+      var decoded = await decodeUiImage(bytes);
+      final scaled = await downscaleUiImage(decoded, _maxWorkingEdge);
+      if (!identical(scaled, decoded)) decoded.dispose();
+      decoded = scaled;
+      final working = await encodeUiImage(decoded) ?? bytes;
+      // Fresh state for the new image; show instantly with no CPU re-render.
+      state = EditorState(original: working, sourceImage: decoded);
+    } catch (e) {
+      debugPrint('loadImage failed, falling back: $e');
+      Uint8List working;
+      try {
+        working = await _engine.fitWithin(bytes, maxLongEdge: _maxWorkingEdge);
+      } catch (_) {
+        working = bytes;
+      }
+      state = EditorState(original: working);
+      await _render();
     }
-    state = EditorState(original: working);
-    await _render();
+    if (old != null && !identical(old, state.sourceImage)) old.dispose();
   }
 
   /// Live tonal update — GPU only, no CPU pixel work. Cheap enough per frame.
@@ -260,19 +290,32 @@ class EditorController extends Notifier<EditorState> {
   /// Runs the CPU structural stack over the original, then decodes the result
   /// into a GPU texture the shader layer paints on top of.
   Future<void> _render() async {
-    final original = state.original;
-    if (original == null) return;
-
+    // Serialize: if a render is in flight, ask it to run once more with the
+    // latest state instead of starting a concurrent (racing) render.
+    if (_rendering) {
+      _renderAgain = true;
+      return;
+    }
+    _rendering = true;
     try {
-      await _renderInternal(original);
-    } catch (e) {
-      // Never let a single bad op take down the app; just stop the spinner.
-      debugPrint('Editor render failed: $e');
-      state = state.copyWith(isProcessing: false);
+      do {
+        _renderAgain = false;
+        final original = state.original;
+        if (original == null) break;
+        try {
+          await _renderInternal(original, _generation);
+        } catch (e) {
+          // Never let a single bad op take down the app; just stop the spinner.
+          debugPrint('Editor render failed: $e');
+          state = state.copyWith(isProcessing: false);
+        }
+      } while (_renderAgain);
+    } finally {
+      _rendering = false;
     }
   }
 
-  Future<void> _renderInternal(Uint8List original) async {
+  Future<void> _renderInternal(Uint8List original, int gen) async {
     var buffer = original;
     for (final node in state.stack) {
       buffer = switch (node) {
@@ -298,8 +341,13 @@ class EditorController extends Notifier<EditorState> {
     }
 
     final decoded = await decodeUiImage(buffer);
-    state.sourceImage?.dispose();
-    state = state.copyWith(sourceImage: decoded, isProcessing: false);
+    // A newer image was loaded while we were working — discard this result so we
+    // never dispose/replace the wrong texture.
+    if (gen != _generation) {
+      decoded.dispose();
+      return;
+    }
+    _setSourceImage(decoded);
   }
 
   /// Full-res export: replay the GPU tonal layer over the structural result at
