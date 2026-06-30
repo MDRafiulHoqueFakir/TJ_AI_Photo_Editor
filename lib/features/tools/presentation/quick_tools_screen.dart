@@ -11,6 +11,7 @@ import '../../../core/services/image_engine.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/coming_soon_sheet.dart';
 import '../../../shared/widgets/feature_grid.dart';
+import '../../ai_studio/application/generative_service.dart';
 
 /// Quick one-shot tools. The on-device ones (upscale, denoise, HDR) run for
 /// real; object/background removal need the segmentation model and say so.
@@ -55,13 +56,50 @@ class _QuickToolsScreenState extends ConsumerState<QuickToolsScreen> {
               'which is being bundled.',
         );
       case 'BG Remover':
+        await _generative('cjwbw/rembg', 'bg_removed');
+    }
+  }
+
+  /// Run a Replicate model (via the local proxy) on a picked photo and save the
+  /// result. Explains clearly when the AI backend / token isn't set up.
+  Future<void> _generative(String model, String suffix) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    setState(() => _busy = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      final res = await GenerativeService.run(model, const {}, imageBytes: bytes);
+      if (!mounted) return;
+      if (res.error == 'no-token') {
         showComingSoon(
           context,
-          title: 'Background Remover',
+          title: 'Connect your AI key',
           reason:
-              'Cutting out the subject needs the on-device segmentation model. '
-              'It runs fully offline once the model is bundled with the app.',
+              'This uses a cloud AI model. Put your Replicate API token in a file '
+              'named ".replicate-token" in the app folder, then relaunch via '
+              'run_web.bat. (Free on-device tools work without it.)',
         );
+        return;
+      }
+      if (!res.ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.error ?? 'Failed.')),
+        );
+        return;
+      }
+      await FileSaver.instance.saveFile(
+        name: 'tj_${suffix}_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: res.image!,
+        fileExtension: 'png',
+        mimeType: MimeType.png,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Done. Saved to downloads.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 

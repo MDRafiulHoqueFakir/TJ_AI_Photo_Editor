@@ -25,6 +25,7 @@ Thumbs.db
 # Secrets
 **/secrets.dart
 .env
+.replicate-token
 
 # Local Claude settings / dev launch configs (machine-specific paths)
 .claude/settings.local.json

@@ -59,9 +59,10 @@ class AiStudioScreen extends StatelessWidget {
       context,
       title: title,
       reason:
-          'This generates $what — a job for cloud GPUs. It turns on once the AI '
-          'image-generation backend is connected. Meanwhile, the "Ready to use" '
-          'tools above and the Editor filters all work right now, on-device.',
+          'This generates $what on cloud GPUs (Replicate). Add your token in a '
+          '".replicate-token" file and launch via run_web.bat — see '
+          'docs/GENERATIVE_AI.md. Background Remover in Quick Tools already works '
+          'this way; hair/fill/bg-generate need a model + prompt wired next.',
     );
   }
 

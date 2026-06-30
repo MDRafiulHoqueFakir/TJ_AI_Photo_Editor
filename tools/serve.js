@@ -34,8 +34,71 @@ if (!fs.existsSync(path.join(root, 'index.html'))) {
   process.exit(1);
 }
 
+// ---- Replicate proxy (so the browser never sees the token, no CORS) ----
+// Token comes from REPLICATE_API_TOKEN or a ".replicate-token" file at the
+// project root. The app calls same-origin /api/* ; we add the token here.
+function replicateToken() {
+  if (process.env.REPLICATE_API_TOKEN) return process.env.REPLICATE_API_TOKEN.trim();
+  try {
+    return fs.readFileSync(path.join(__dirname, '..', '.replicate-token'), 'utf8').trim();
+  } catch (_) {
+    return null;
+  }
+}
+
+function readBody(req) {
+  return new Promise((resolve) => {
+    let b = '';
+    req.on('data', (c) => (b += c));
+    req.on('end', () => resolve(b));
+  });
+}
+
+async function handleApi(req, res, urlPath) {
+  const token = replicateToken();
+  if (urlPath === '/api/config') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ hasToken: !!token }));
+  }
+  if (urlPath === '/api/replicate' && req.method === 'POST') {
+    if (!token) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'no-token' }));
+    }
+    try {
+      const { model, input } = JSON.parse(await readBody(req));
+      // `Prefer: wait` blocks until the prediction finishes (up to ~60s),
+      // so the output is returned directly — no polling needed.
+      const r = await fetch(
+        `https://api.replicate.com/v1/models/${model}/predictions`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Prefer: 'wait',
+          },
+          body: JSON.stringify({ input }),
+        },
+      );
+      const text = await r.text();
+      res.writeHead(r.status, { 'Content-Type': 'application/json' });
+      return res.end(text);
+    } catch (e) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: String(e) }));
+    }
+  }
+  res.writeHead(404, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: 'not-found' }));
+}
+
 const server = http.createServer((req, res) => {
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
+  if (urlPath.startsWith('/api/')) {
+    handleApi(req, res, urlPath);
+    return;
+  }
   if (urlPath === '/') urlPath = '/index.html';
   const file = path.normalize(path.join(root, urlPath));
   if (!file.startsWith(root)) {
