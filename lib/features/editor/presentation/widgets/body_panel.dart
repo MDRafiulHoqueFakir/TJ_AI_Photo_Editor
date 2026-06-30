@@ -5,7 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../application/editor_controller.dart';
 import '../../domain/edit_node.dart';
 
-/// Body reshape: slim/wide and shorter/taller. Live-updates a single node.
+/// Body reshape: slim/wide and shorter/taller. The slider moves smoothly while
+/// dragging; the on-device reshape applies once on release (not every tick).
 class BodyPanel extends ConsumerStatefulWidget {
   const BodyPanel({super.key});
 
@@ -17,7 +18,7 @@ class _BodyPanelState extends ConsumerState<BodyPanel> {
   double _slim = 0;
   double _stretch = 0;
 
-  void _apply() {
+  void _commit() {
     ref
         .read(editorControllerProvider.notifier)
         .updateLiveBody(BodyReshapeNode(slim: _slim, stretch: _stretch));
@@ -31,14 +32,13 @@ class _BodyPanelState extends ConsumerState<BodyPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _row('Slim ↔ Wide', _slim, (v) {
-            setState(() => _slim = v);
-            _apply();
-          }),
-          _row('Shorter ↔ Taller', _stretch, (v) {
-            setState(() => _stretch = v);
-            _apply();
-          }),
+          const Text(
+            'Slide, then release to apply',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+          ),
+          _row('Slim ↔ Wide', _slim, (v) => setState(() => _slim = v)),
+          _row('Shorter ↔ Taller', _stretch,
+              (v) => setState(() => _stretch = v),),
         ],
       ),
     );
@@ -52,7 +52,13 @@ class _BodyPanelState extends ConsumerState<BodyPanel> {
           child: Text(label, style: const TextStyle(fontSize: 12)),
         ),
         Expanded(
-          child: Slider(value: value, min: -1, max: 1, onChanged: onChanged),
+          child: Slider(
+            value: value,
+            min: -1,
+            max: 1,
+            onChanged: onChanged,
+            onChangeEnd: (_) => _commit(),
+          ),
         ),
       ],
     );

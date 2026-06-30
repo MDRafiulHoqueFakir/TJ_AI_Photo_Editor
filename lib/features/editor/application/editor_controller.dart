@@ -285,6 +285,10 @@ class EditorController extends Notifier<EditorState> {
 
   // ---- Face region (brighten / smooth / slim) ----
 
+  /// Move the face oval WITHOUT re-rendering (cheap; for live dragging). Call
+  /// [updateFace] on release to actually apply.
+  void setFaceRect(ui.Rect rect) => state = state.copyWith(faceRect: rect);
+
   /// Update the face region and/or its amounts; maintains a single live
   /// FaceAdjustNode at the top of the stack (replace, don't compound).
   Future<void> updateFace({

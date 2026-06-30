@@ -13,6 +13,7 @@ class CropOverlay extends StatelessWidget {
     required this.height,
     required this.rect,
     required this.onChanged,
+    this.onChangeEnd,
     this.ellipse = false,
   });
 
@@ -20,6 +21,7 @@ class CropOverlay extends StatelessWidget {
   final double height;
   final Rect rect; // fractions 0..1
   final ValueChanged<Rect> onChanged;
+  final VoidCallback? onChangeEnd; // fired when a drag finishes (commit point)
   final bool ellipse; // draw as an oval (face region) instead of a rectangle
 
   static const _min = 0.08; // min crop size as a fraction
@@ -77,6 +79,7 @@ class CropOverlay extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onPanUpdate: (d) => moveBy(d.delta.dx, d.delta.dy),
+              onPanEnd: (_) => onChangeEnd?.call(),
               child: Container(
                 decoration: BoxDecoration(
                   shape: ellipse ? BoxShape.circle : BoxShape.rectangle,
@@ -104,6 +107,7 @@ class CropOverlay extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onPanUpdate: (d) => onDrag(d.delta),
+        onPanEnd: (_) => onChangeEnd?.call(),
         child: Center(
           child: Container(
             width: 16,

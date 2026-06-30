@@ -250,9 +250,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                           .read(editorControllerProvider.notifier)
                           .setCropRect,
                       faceMode: _activeTool == EditorTool.face,
-                      onFaceRectChanged: (r) => ref
+                      onFaceRectChanged: ref
                           .read(editorControllerProvider.notifier)
-                          .updateFace(rect: r),
+                          .setFaceRect,
+                      onFaceCommit: () => ref
+                          .read(editorControllerProvider.notifier)
+                          .updateFace(),
                     ),
                   ),
                 ),
@@ -307,6 +310,7 @@ class _CanvasView extends StatelessWidget {
     required this.onCropChanged,
     required this.faceMode,
     required this.onFaceRectChanged,
+    required this.onFaceCommit,
   });
   final EditorState state;
   final bool comparing;
@@ -317,6 +321,7 @@ class _CanvasView extends StatelessWidget {
   final void Function(Rect rect) onCropChanged;
   final bool faceMode;
   final void Function(Rect rect) onFaceRectChanged;
+  final VoidCallback onFaceCommit;
 
   @override
   Widget build(BuildContext context) {
@@ -436,6 +441,7 @@ class _CanvasView extends StatelessWidget {
                     height: inner.height,
                     rect: state.faceRect,
                     onChanged: onFaceRectChanged,
+                    onChangeEnd: onFaceCommit,
                     ellipse: true,
                   ),
                 ),
