@@ -37,6 +37,10 @@ class EditorState {
     this.healRadius = 0.035,
     this.freeCropMode = false,
     this.cropRect = const ui.Rect.fromLTRB(0.1, 0.1, 0.9, 0.9),
+    this.faceRect = const ui.Rect.fromLTRB(0.3, 0.18, 0.7, 0.8),
+    this.faceBrighten = 0,
+    this.faceSmooth = 0,
+    this.faceSlim = 0,
     this.stack = const [],
     this.redoStack = const [],
     this.isProcessing = false,
@@ -53,6 +57,10 @@ class EditorState {
   final double healRadius;
   final bool freeCropMode; // when on, a draggable crop box is shown
   final ui.Rect cropRect; // freeform crop, fractions of the image (0..1)
+  final ui.Rect faceRect; // face region ellipse, fractions (0..1)
+  final double faceBrighten;
+  final double faceSmooth;
+  final double faceSlim;
   final List<EditNode> stack;
   final List<List<EditNode>> redoStack;
   final bool isProcessing;
@@ -79,6 +87,10 @@ class EditorState {
     double? healRadius,
     bool? freeCropMode,
     ui.Rect? cropRect,
+    ui.Rect? faceRect,
+    double? faceBrighten,
+    double? faceSmooth,
+    double? faceSlim,
     List<EditNode>? stack,
     List<List<EditNode>>? redoStack,
     bool? isProcessing,
@@ -97,6 +109,10 @@ class EditorState {
       healRadius: healRadius ?? this.healRadius,
       freeCropMode: freeCropMode ?? this.freeCropMode,
       cropRect: cropRect ?? this.cropRect,
+      faceRect: faceRect ?? this.faceRect,
+      faceBrighten: faceBrighten ?? this.faceBrighten,
+      faceSmooth: faceSmooth ?? this.faceSmooth,
+      faceSlim: faceSlim ?? this.faceSlim,
       stack: stack ?? this.stack,
       redoStack: redoStack ?? this.redoStack,
       isProcessing: isProcessing ?? this.isProcessing,
@@ -266,6 +282,42 @@ class EditorController extends Notifier<EditorState> {
     ),);
   }
 
+  // ---- Face region (brighten / smooth / slim) ----
+
+  /// Update the face region and/or its amounts; maintains a single live
+  /// FaceAdjustNode at the top of the stack (replace, don't compound).
+  Future<void> updateFace({
+    ui.Rect? rect,
+    double? brighten,
+    double? smooth,
+    double? slim,
+  }) async {
+    state = state.copyWith(
+      faceRect: rect ?? state.faceRect,
+      faceBrighten: brighten ?? state.faceBrighten,
+      faceSmooth: smooth ?? state.faceSmooth,
+      faceSlim: slim ?? state.faceSlim,
+    );
+    final r = state.faceRect;
+    final node = FaceAdjustNode(
+      cx: r.center.dx,
+      cy: r.center.dy,
+      rx: r.width / 2,
+      ry: r.height / 2,
+      brighten: state.faceBrighten,
+      smooth: state.faceSmooth,
+      slim: state.faceSlim,
+    );
+    final stack = [...state.stack];
+    if (stack.isNotEmpty && stack.last is FaceAdjustNode) {
+      stack[stack.length - 1] = node;
+    } else {
+      stack.add(node);
+    }
+    state = state.copyWith(stack: stack, isProcessing: true);
+    await _render();
+  }
+
   // ---- Spot heal ----
 
   void toggleHeal() => state = state.copyWith(healMode: !state.healMode);
@@ -391,6 +443,25 @@ class EditorController extends Notifier<EditorState> {
           await _engine.reshapeBody(buffer, slim: slim, stretch: stretch),
         HealNode(:final dx, :final dy, :final radius) =>
           await _engine.heal(buffer, dx: dx, dy: dy, radius: radius),
+        FaceAdjustNode(
+          :final cx,
+          :final cy,
+          :final rx,
+          :final ry,
+          :final brighten,
+          :final smooth,
+          :final slim,
+        ) =>
+          await _engine.faceAdjust(
+            buffer,
+            cx: cx,
+            cy: cy,
+            rx: rx,
+            ry: ry,
+            brighten: brighten,
+            smooth: smooth,
+            slim: slim,
+          ),
         CropNode(
           :final hasRect,
           :final ratio,

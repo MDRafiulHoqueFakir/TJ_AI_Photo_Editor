@@ -124,6 +124,15 @@ void main() {
       expect(ratio, closeTo(16 / 9, 0.15));
     });
 
+    test('face: updateFace keeps a single FaceAdjustNode and edits', () async {
+      await c.loadImage(_testImage());
+      await c.updateFace(brighten: 0.5);
+      await c.updateFace(slim: -0.4, smooth: 0.5);
+      final s = container.read(editorControllerProvider);
+      expect(s.stack.whereType<FaceAdjustNode>().length, 1);
+      expect(s.sourceImage, isNotNull);
+    });
+
     test('free crop: begin, drag a box, apply crops to it', () async {
       await c.loadImage(_testImage()); // 160x120
       c.beginFreeCrop();
@@ -151,6 +160,20 @@ void main() {
       // Reshape output keeps the original dimensions (filled, not letterboxed).
       final reshaped = await e.reshapeBody(src, slim: -0.5, stretch: 0.3);
       expect(reshaped.lengthInBytes, greaterThan(0));
+    });
+
+    test('faceAdjust edits a region without throwing', () async {
+      final out = await e.faceAdjust(
+        src,
+        cx: 0.5,
+        cy: 0.5,
+        rx: 0.25,
+        ry: 0.3,
+        brighten: 0.5,
+        smooth: 0.5,
+        slim: -0.3,
+      );
+      expect(out.lengthInBytes, greaterThan(0));
     });
   });
 }

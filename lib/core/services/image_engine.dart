@@ -73,6 +73,20 @@ abstract interface class ImageEngine {
     required int bgArgb,
   });
 
+  /// Face region edit inside a feathered ellipse centred at ([cx],[cy]) with
+  /// radii ([rx],[ry]) — all fractions of the image (0..1).
+  /// [brighten] -1..1 (lighten/darken), [smooth] 0..1, [slim] -1..1 (>0 thinner).
+  Future<Uint8List> faceAdjust(
+    Uint8List source, {
+    required double cx,
+    required double cy,
+    required double rx,
+    required double ry,
+    double brighten = 0,
+    double smooth = 0,
+    double slim = 0,
+  });
+
   /// Spot-heal: remove a small blemish at ([dx],[dy]) (image-relative 0..1) by
   /// replacing a feathered disc with the average skin tone sampled from a ring
   /// around it. [radius] is a fraction of the shorter side.

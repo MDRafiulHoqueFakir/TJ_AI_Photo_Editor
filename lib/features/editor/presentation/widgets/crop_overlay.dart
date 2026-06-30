@@ -13,12 +13,14 @@ class CropOverlay extends StatelessWidget {
     required this.height,
     required this.rect,
     required this.onChanged,
+    this.ellipse = false,
   });
 
   final double width;
   final double height;
   final Rect rect; // fractions 0..1
   final ValueChanged<Rect> onChanged;
+  final bool ellipse; // draw as an oval (face region) instead of a rectangle
 
   static const _min = 0.08; // min crop size as a fraction
 
@@ -62,11 +64,11 @@ class CropOverlay extends StatelessWidget {
           Positioned.fill(
             child: IgnorePointer(
               child: CustomPaint(
-                painter: _DimPainter(Rect.fromLTRB(l, t, r, b)),
+                painter: _DimPainter(Rect.fromLTRB(l, t, r, b), ellipse),
               ),
             ),
           ),
-          // Crop frame (draggable to move).
+          // Frame (draggable to move).
           Positioned(
             left: l,
             top: t,
@@ -77,6 +79,7 @@ class CropOverlay extends StatelessWidget {
               onPanUpdate: (d) => moveBy(d.delta.dx, d.delta.dy),
               child: Container(
                 decoration: BoxDecoration(
+                  shape: ellipse ? BoxShape.circle : BoxShape.rectangle,
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),
               ),
@@ -118,20 +121,23 @@ class CropOverlay extends StatelessWidget {
 }
 
 class _DimPainter extends CustomPainter {
-  _DimPainter(this.hole);
+  _DimPainter(this.hole, this.ellipse);
   final Rect hole;
+  final bool ellipse;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = Colors.black54;
     final full = Path()..addRect(Offset.zero & size);
-    final inner = Path()..addRect(hole);
+    final inner = Path()..addOval(hole);
+    final innerPath = ellipse ? inner : (Path()..addRect(hole));
     canvas.drawPath(
-      Path.combine(PathOperation.difference, full, inner),
+      Path.combine(PathOperation.difference, full, innerPath),
       paint,
     );
   }
 
   @override
-  bool shouldRepaint(_DimPainter old) => old.hole != hole;
+  bool shouldRepaint(_DimPainter old) =>
+      old.hole != hole || old.ellipse != ellipse;
 }

@@ -15,6 +15,7 @@ import 'widgets/adjust_panel.dart';
 import 'widgets/body_panel.dart';
 import 'widgets/crop_overlay.dart';
 import 'widgets/crop_panel.dart';
+import 'widgets/face_panel.dart';
 import 'widgets/filter_panel.dart';
 import 'widgets/frame_panel.dart';
 import 'widgets/retouch_panel.dart';
@@ -136,6 +137,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     return switch (tool) {
       EditorTool.adjust => const AdjustPanel(),
       EditorTool.retouch => const RetouchPanel(),
+      EditorTool.face => const FacePanel(),
       EditorTool.body => const BodyPanel(),
       EditorTool.crop => const CropPanel(),
       EditorTool.filter => const FilterPanel(),
@@ -197,6 +199,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       ref.read(editorControllerProvider.notifier).addHeal,
                   onCropChanged:
                       ref.read(editorControllerProvider.notifier).setCropRect,
+                  faceMode: _activeTool == EditorTool.face,
+                  onFaceRectChanged: (r) => ref
+                      .read(editorControllerProvider.notifier)
+                      .updateFace(rect: r),
                 ),
               ),
             ),
@@ -230,6 +236,8 @@ class _CanvasView extends StatelessWidget {
     required this.onSelectOverlay,
     required this.onHealTap,
     required this.onCropChanged,
+    required this.faceMode,
+    required this.onFaceRectChanged,
   });
   final EditorState state;
   final bool comparing;
@@ -238,6 +246,8 @@ class _CanvasView extends StatelessWidget {
   final void Function(String? id) onSelectOverlay;
   final void Function(double dx, double dy) onHealTap;
   final void Function(Rect rect) onCropChanged;
+  final bool faceMode;
+  final void Function(Rect rect) onFaceRectChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -292,8 +302,8 @@ class _CanvasView extends StatelessWidget {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapUp: (details) {
-            if (state.freeCropMode) {
-              return; // the crop overlay owns gestures while cropping
+            if (state.freeCropMode || faceMode) {
+              return; // an overlay owns gestures while cropping / face editing
             }
             if (state.healMode && !comparing) {
               final p = details.localPosition;
@@ -344,6 +354,17 @@ class _CanvasView extends StatelessWidget {
                     height: inner.height,
                     rect: state.cropRect,
                     onChanged: onCropChanged,
+                  ),
+                ),
+              if (faceMode && !comparing && !state.freeCropMode)
+                Positioned.fromRect(
+                  rect: inner,
+                  child: CropOverlay(
+                    width: inner.width,
+                    height: inner.height,
+                    rect: state.faceRect,
+                    onChanged: onFaceRectChanged,
+                    ellipse: true,
                   ),
                 ),
               if (state.isProcessing)

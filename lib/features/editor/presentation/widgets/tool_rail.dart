@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 enum EditorTool {
   adjust(Icons.tune, 'Adjust'),
   retouch(Icons.face_retouching_natural, 'Retouch'),
+  face(Icons.face, 'Face'),
   body(Icons.accessibility_new, 'Body'),
   ai(Icons.auto_awesome, 'AI'),
   filter(Icons.filter_vintage, 'Filter'),

@@ -87,6 +87,34 @@ class SmoothNode extends EditNode {
   Map<String, dynamic> toJson() => {'type': 'smooth', 'amount': amount};
 }
 
+class FaceAdjustNode extends EditNode {
+  const FaceAdjustNode({
+    required this.cx,
+    required this.cy,
+    required this.rx,
+    required this.ry,
+    this.brighten = 0,
+    this.smooth = 0,
+    this.slim = 0,
+  });
+  final double cx, cy, rx, ry; // ellipse, fractions of image
+  final double brighten; // -1..1
+  final double smooth; // 0..1
+  final double slim; // -1..1
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'face',
+        'cx': cx,
+        'cy': cy,
+        'rx': rx,
+        'ry': ry,
+        'brighten': brighten,
+        'smooth': smooth,
+        'slim': slim,
+      };
+}
+
 class HealNode extends EditNode {
   const HealNode({required this.dx, required this.dy, this.radius = 0.035});
   final double dx; // 0..1

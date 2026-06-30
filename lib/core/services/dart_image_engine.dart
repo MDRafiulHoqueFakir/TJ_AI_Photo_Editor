@@ -349,6 +349,72 @@ class DartImageEngine implements ImageEngine {
   double _dist(num a, num b) => math.sqrt(a * a + b * b);
 
   @override
+  Future<Uint8List> faceAdjust(
+    Uint8List source, {
+    required double cx,
+    required double cy,
+    required double rx,
+    required double ry,
+    double brighten = 0,
+    double smooth = 0,
+    double slim = 0,
+  }) async {
+    final image = img.decodeImage(source);
+    if (image == null) return source;
+    if (brighten == 0 && smooth == 0 && slim == 0) return source;
+
+    final w = image.width;
+    final h = image.height;
+    final centerX = cx * w;
+    final centerY = cy * h;
+    final radX = (rx * w).clamp(1.0, w.toDouble());
+    final radY = (ry * h).clamp(1.0, h.toDouble());
+
+    final src = image.clone(); // sample source (for the slim warp)
+    final blurred = smooth > 0
+        ? img.gaussianBlur(image.clone(), radius: (1 + smooth * 4).round())
+        : null;
+
+    final x0 = (centerX - radX * 1.4).floor().clamp(0, w - 1);
+    final x1 = (centerX + radX * 1.4).ceil().clamp(0, w - 1);
+    final y0 = (centerY - radY * 1.4).floor().clamp(0, h - 1);
+    final y1 = (centerY + radY * 1.4).ceil().clamp(0, h - 1);
+
+    for (var y = y0; y <= y1; y++) {
+      for (var x = x0; x <= x1; x++) {
+        final nx = (x - centerX) / radX;
+        final ny = (y - centerY) / radY;
+        final d = math.sqrt(nx * nx + ny * ny);
+        if (d > 1.4) continue;
+        final mask = d <= 1.0 ? 1.0 : (1.4 - d) / 0.4; // feathered edge
+
+        // Slim: sample from a wider source so the face compresses inward.
+        var sx = x.toDouble();
+        if (slim != 0) sx = centerX + (x - centerX) * (1 + slim * 0.6 * mask);
+        final sxi = sx.round().clamp(0, w - 1);
+        final p = src.getPixel(sxi, y);
+        var r = p.r.toDouble(), g = p.g.toDouble(), b = p.b.toDouble();
+
+        if (blurred != null) {
+          final bp = blurred.getPixel(sxi, y);
+          final t = smooth * mask * 0.85;
+          r = r * (1 - t) + bp.r * t;
+          g = g * (1 - t) + bp.g * t;
+          b = b * (1 - t) + bp.b * t;
+        }
+        if (brighten != 0) {
+          final add = brighten * 60 * mask;
+          r += add;
+          g += add;
+          b += add;
+        }
+        image.setPixelRgb(x, y, r.clamp(0, 255), g.clamp(0, 255), b.clamp(0, 255));
+      }
+    }
+    return Uint8List.fromList(img.encodeJpg(image, quality: 92));
+  }
+
+  @override
   Future<Uint8List> frame(
     Uint8List source, {
     required int borderPx,
