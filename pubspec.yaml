@@ -33,9 +33,6 @@ dependencies:
   # Save/export the edited image (web triggers a download; native writes a file)
   file_saver: ^0.4.0
 
-  # HTTP (calls the local /api/replicate proxy for generative AI features)
-  http: ^1.2.0
-
   # Utilities
   collection: ^1.18.0
   uuid: ^4.4.0

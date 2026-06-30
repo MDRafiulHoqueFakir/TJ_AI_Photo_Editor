@@ -4,11 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/art_effects.dart';
-import 'generative_flow.dart';
 
-/// AI Studio. Tools that genuinely run on-device are grouped as "Ready to use";
-/// truly generative tools (which need a GPU backend) are grouped separately and
-/// honest about it — no fake "coming soon" mixed in with working features.
+/// AI Studio — on-device creative tools (work offline, free, no limits).
 class AiStudioScreen extends StatelessWidget {
   const AiStudioScreen({super.key});
 
@@ -19,7 +16,7 @@ class AiStudioScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _header('Ready to use', 'Runs on your device — works offline, no limits.'),
+          _header('Creative tools', 'Run on your device — offline, free, no limits.'),
           const SizedBox(height: 12),
           _grid([
             _Tool(Icons.auto_fix_high, 'Auto Enhance', AppColors.accent,
@@ -30,37 +27,6 @@ class AiStudioScreen extends StatelessWidget {
                 () => _art(context, ArtStyle.cartoon),),
             _Tool(Icons.filter_vintage, 'More styles', AppColors.primary,
                 () => _art(context, ArtStyle.popArt),),
-          ]),
-          const SizedBox(height: 24),
-          _header('Cloud AI', 'Generative tools that need an AI backend connected.'),
-          const SizedBox(height: 12),
-          _grid([
-            _Tool(Icons.content_cut, 'Hair Restyle', AppColors.proGold,
-                () => GenerativeFlow.run(
-                      context,
-                      model: GenModels.edit,
-                      imageKey: 'input_image',
-                      title: 'Hair Restyle',
-                      promptLabel: 'e.g. "give this person short curly hair"',
-                      defaultPrompt: 'change the hairstyle to ',
-                    ),),
-            _Tool(Icons.auto_awesome, 'Generative Fill', AppColors.proGold,
-                () => GenerativeFlow.run(
-                      context,
-                      model: GenModels.edit,
-                      imageKey: 'input_image',
-                      title: 'Generative Fill',
-                      promptLabel: 'Describe what to add / replace',
-                    ),),
-            _Tool(Icons.wallpaper, 'BG Generate', AppColors.proGold,
-                () => GenerativeFlow.run(
-                      context,
-                      model: GenModels.edit,
-                      imageKey: 'input_image',
-                      title: 'Background',
-                      promptLabel: 'e.g. "change the background to a beach"',
-                      defaultPrompt: 'change the background to ',
-                    ),),
           ]),
         ],
       ),

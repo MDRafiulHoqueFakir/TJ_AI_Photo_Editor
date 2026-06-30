@@ -10,10 +10,8 @@ import '../../../core/services/dart_image_engine.dart';
 import '../../../core/services/image_engine.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/feature_grid.dart';
-import '../../ai_studio/presentation/generative_flow.dart';
 
-/// Quick one-shot tools. The on-device ones (upscale, denoise, HDR) run for
-/// real; object/background removal need the segmentation model and say so.
+/// Quick one-shot tools that run on-device (upscale, denoise, HDR).
 class QuickToolsScreen extends ConsumerStatefulWidget {
   const QuickToolsScreen({super.key});
 
@@ -30,8 +28,6 @@ class _QuickToolsScreenState extends ConsumerState<QuickToolsScreen> {
     FeatureItem(icon: Icons.four_k, label: 'Upscale 4x', tier: ToolTier.free),
     FeatureItem(icon: Icons.blur_on, label: 'Denoise', tier: ToolTier.free),
     FeatureItem(icon: Icons.hdr_on, label: 'HDR', tier: ToolTier.free),
-    FeatureItem(icon: Icons.cleaning_services, label: 'Object Remover', tier: ToolTier.free),
-    FeatureItem(icon: Icons.layers_clear, label: 'BG Remover', tier: ToolTier.free),
   ];
 
   Future<void> _onTap(FeatureItem item) async {
@@ -44,21 +40,6 @@ class _QuickToolsScreenState extends ConsumerState<QuickToolsScreen> {
         await _run((b) => _engine.denoise(b, amount: 0.6), 'denoised');
       case 'HDR':
         await _run((b) => _engine.hdr(b, amount: 0.7), 'hdr');
-      case 'Object Remover':
-        await GenerativeFlow.run(
-          context,
-          model: GenModels.edit,
-          imageKey: 'input_image',
-          title: 'Object Remover',
-          promptLabel: 'What to remove? e.g. "the person on the left"',
-          defaultPrompt: 'remove ',
-        );
-      case 'BG Remover':
-        await GenerativeFlow.run(
-          context,
-          model: GenModels.bgRemove,
-          title: 'Background Remover',
-        );
     }
   }
 
